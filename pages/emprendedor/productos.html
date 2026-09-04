@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EmpreHub - Mis productos</title>
+
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="../../css/login.css">
+  <link rel="stylesheet" href="../../css/emprendedor.css">
+</head>
+<body data-pagina-emprendedor="true">
+
+  <header class="header">
+    <div class="header__contenido contenedor">
+      <a href="panel.html" class="header__logo">
+        <img src="../../img/logo.png" alt="EmpreHub">
+      </a>
+      <button class="header__hamburguesa" aria-label="Abrir menú">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="header__nav">
+        <a href="../perfil.html">Perfil</a>
+        <button data-accion="cerrar-sesion" data-destino="../../index.html">Cerrar sesión</button>
+      </nav>
+    </div>
+  </header>
+
+  <div class="panel">
+    <aside class="panel__menu">
+      <a href="panel.html">🏠 Panel</a>
+      <a href="mi-emprendimiento.html">🏪 Mi emprendimiento</a>
+      <a href="productos.html" class="activo">📦 Mis productos</a>
+      <a href="pedidos.html">🧾 Pedidos</a>
+    </aside>
+
+    <section class="panel__contenido">
+
+      <!-- Aviso si el emprendedor todavía no creó su emprendimiento -->
+      <div id="avisoCrearEmprendimiento" class="mensaje mensaje-error oculto" style="margin-bottom: var(--espacio-lg);">
+        Antes de agregar productos, primero debes crear tu emprendimiento.
+        <a href="mi-emprendimiento.html" style="font-weight:700;">Crear ahora →</a>
+      </div>
+
+      <div id="seccionProductos">
+        <!-- Formulario para agregar/editar producto -->
+        <div class="tarjeta-formulario" style="margin:0 0 var(--espacio-lg);">
+          <h2 id="tituloFormProducto">Agregar producto</h2>
+
+          <form id="formProducto" novalidate>
+            <div class="campo">
+              <label for="prodNombreInput">Nombre del producto</label>
+              <input type="text" id="prodNombreInput" placeholder="Ej. Arroz con pollo">
+              <span class="error-campo" id="errorProdNombre"></span>
+            </div>
+
+            <div class="campo">
+              <label for="prodDescripcionInput">Descripción</label>
+              <input type="text" id="prodDescripcionInput" placeholder="Breve descripción del producto">
+              <span class="error-campo" id="errorProdDescripcion"></span>
+            </div>
+
+            <div class="campo">
+              <label for="prodCategoriaInput">Categoría</label>
+              <select id="prodCategoriaInput">
+                <option value="">Selecciona una categoría</option>
+                <option value="Platos">🍽️ Platos</option>
+                <option value="Bebidas">🥤 Bebidas</option>
+                <option value="Productos">🛍️ Productos</option>
+                <option value="Postres">🧁 Postres</option>
+              </select>
+              <span class="error-campo" id="errorProdCategoria"></span>
+            </div>
+
+            <div class="campo">
+              <label for="prodPrecioInput">Precio (S/)</label>
+              <input type="number" id="prodPrecioInput" step="0.10" min="0.10" placeholder="Ej. 12.00">
+              <span class="error-campo" id="errorProdPrecio"></span>
+            </div>
+
+            <div class="campo">
+              <label for="prodStockInput">Stock disponible</label>
+              <input type="number" id="prodStockInput" step="1" min="0" placeholder="Ej. 10">
+              <span class="error-campo" id="errorProdStock"></span>
+            </div>
+
+            <div class="carrito__acciones">
+              <button type="button" id="btnCancelarEdicionProducto" class="btn btn-secundario">Cancelar</button>
+              <button type="submit" id="btnGuardarProducto" class="btn btn-primario">Agregar producto</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Listado de productos ya publicados -->
+        <h2 class="inicio__seccion-titulo">Mis productos publicados</h2>
+        <div class="lista-productos-admin" id="listaProductosAdmin"></div>
+      </div>
+
+    </section>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="../../js/app.js"></script>
+  <script src="../../js/emprendedor.js"></script>
+</body>
+</html>

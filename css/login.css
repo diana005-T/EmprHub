@@ -1,0 +1,142 @@
+/* ==========================================================================
+   EmpreHub - login.css
+   Estilos de la pantalla de REGISTRO / INICIO DE SESIÓN (pages/registro.html)
+   ========================================================================== */
+
+.auth {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--espacio-md);
+}
+
+.auth__tarjeta {
+  background-color: var(--color-blanco);
+  border-radius: var(--borde-radius);
+  box-shadow: var(--sombra-suave);
+  max-width: 420px;
+  width: 100%;
+  padding: var(--espacio-lg);
+}
+
+.auth__logo {
+  display: block;
+  width: 80px;
+  margin: 0 auto var(--espacio-sm);
+}
+
+.auth__titulo {
+  text-align: center;
+  color: var(--color-azul);
+  margin-bottom: var(--espacio-lg);
+}
+
+/* --- Selección de tipo de usuario (paso 1 del registro) --- */
+.auth__tipos {
+  display: flex;
+  gap: var(--espacio-sm);
+  margin-bottom: var(--espacio-lg);
+}
+
+.auth__tipo {
+  flex: 1;
+  background-color: var(--color-celeste-claro);
+  border: 2px solid transparent;
+  border-radius: var(--borde-radius-chico);
+  padding: var(--espacio-md) var(--espacio-sm);
+  text-align: center;
+  font-weight: 600;
+  color: var(--color-gris-oscuro);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.auth__tipo span {
+  display: block;
+  font-size: 1.6rem;
+  margin-bottom: 4px;
+}
+
+.auth__tipo.auth__tipo--activo {
+  border-color: var(--color-azul);
+  background-color: var(--color-verde-claro);
+}
+
+/* --- Pestañas: Iniciar sesión / Crear cuenta --- */
+.auth__pestanas {
+  display: flex;
+  margin-bottom: var(--espacio-lg);
+  border-bottom: 2px solid var(--color-celeste-claro);
+}
+
+.auth__pestana {
+  flex: 1;
+  background: none;
+  padding: 10px;
+  font-weight: 600;
+  color: #999;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+}
+
+.auth__pestana.auth__pestana--activa {
+  color: var(--color-azul);
+  border-bottom-color: var(--color-azul);
+}
+
+/* --- Formularios --- */
+.campo {
+  margin-bottom: var(--espacio-md);
+}
+
+.campo label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.campo input,
+.campo select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid #E0E0E0;
+  border-radius: var(--borde-radius-chico);
+  font-size: 1rem;
+  transition: border-color 0.15s ease;
+}
+
+.campo input:focus,
+.campo select:focus {
+  outline: none;
+  border-color: var(--color-azul);
+}
+
+.campo input.campo--invalido {
+  border-color: #E85D5D;
+}
+
+.auth__badge-tipo {
+  background-color: var(--color-verde-claro);
+  color: #2E7D32;
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  border-radius: var(--borde-radius-chico);
+  margin-bottom: var(--espacio-md);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.auth__badge-tipo button {
+  background: none;
+  color: var(--color-azul);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .auth__tarjeta {
+    padding: var(--espacio-md);
+  }
+}

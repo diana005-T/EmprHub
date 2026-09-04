@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EmpreHub - Mi emprendimiento</title>
+
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="../../css/login.css">
+  <link rel="stylesheet" href="../../css/emprendedor.css">
+</head>
+<body data-pagina-emprendedor="true">
+
+  <header class="header">
+    <div class="header__contenido contenedor">
+      <a href="panel.html" class="header__logo">
+        <img src="../../img/logo.png" alt="EmpreHub">
+      </a>
+      <button class="header__hamburguesa" aria-label="Abrir menú">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="header__nav">
+        <a href="../perfil.html">Perfil</a>
+        <button data-accion="cerrar-sesion" data-destino="../../index.html">Cerrar sesión</button>
+      </nav>
+    </div>
+  </header>
+
+  <div class="panel">
+    <aside class="panel__menu">
+      <a href="panel.html">🏠 Panel</a>
+      <a href="mi-emprendimiento.html" class="activo">🏪 Mi emprendimiento</a>
+      <a href="productos.html">📦 Mis productos</a>
+      <a href="pedidos.html">🧾 Pedidos</a>
+    </aside>
+
+    <section class="panel__contenido">
+      <div class="tarjeta-formulario" style="margin:0;">
+        <h2 id="tituloFormEmprendimiento">Crear mi emprendimiento</h2>
+
+        <form id="formEmprendimiento" novalidate>
+          <div class="campo">
+            <label for="empNombreInput">Nombre del emprendimiento</label>
+            <input type="text" id="empNombreInput" placeholder="Ej. Doña Lupe">
+            <span class="error-campo" id="errorEmpNombre"></span>
+          </div>
+
+          <div class="campo">
+            <label for="empDescripcionInput">Descripción</label>
+            <input type="text" id="empDescripcionInput" placeholder="Cuenta brevemente de qué trata tu emprendimiento">
+            <span class="error-campo" id="errorEmpDescripcion"></span>
+          </div>
+
+          <div class="campo">
+            <label for="empCategoriaInput">Categoría</label>
+            <select id="empCategoriaInput">
+              <option value="">Selecciona una categoría</option>
+              <option value="Platos">🍽️ Platos</option>
+              <option value="Bebidas">🥤 Bebidas</option>
+              <option value="Productos">🛍️ Productos</option>
+              <option value="Postres">🧁 Postres</option>
+            </select>
+            <span class="error-campo" id="errorEmpCategoria"></span>
+          </div>
+
+          <div class="campo">
+            <label for="empHorarioInput">Horario de atención (opcional)</label>
+            <input type="text" id="empHorarioInput" placeholder="Ej. Lunes a sábado, 9am - 6pm">
+          </div>
+
+          <div class="campo">
+            <label>Medios de pago</label>
+            <div class="checkbox-grupo">
+              <label><input type="checkbox" name="medioPago" value="Yape"> Yape</label>
+              <label><input type="checkbox" name="medioPago" value="Plin"> Plin</label>
+              <label><input type="checkbox" name="medioPago" value="Efectivo"> Efectivo</label>
+            </div>
+            <span class="error-campo" id="errorEmpMediosPago"></span>
+          </div>
+
+          <div id="mensajeEmprendimiento"></div>
+
+          <button type="submit" id="btnGuardarEmprendimiento" class="btn btn-secundario btn-bloque">Crear emprendimiento</button>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <script src="../../js/app.js"></script>
+  <script src="../../js/emprendedor.js"></script>
+</body>
+</html>

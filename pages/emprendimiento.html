@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EmpreHub - Emprendimiento</title>
+
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/inicio.css">
+  <link rel="stylesheet" href="../css/emprendimiento.css">
+</head>
+<body>
+
+  <header class="header">
+    <div class="header__contenido contenedor">
+      <a href="inicio.html" class="header__logo">
+        <img src="../img/logo.png" alt="EmpreHub">
+      </a>
+      <button class="header__hamburguesa" aria-label="Abrir menú">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="header__nav">
+        <a href="inicio.html">Inicio</a>
+        <a href="favoritos.html">Favoritos</a>
+        <a href="carrito.html" class="header__icono">
+          🛒 Carrito <span id="badgeCarrito" class="badge oculto">0</span>
+        </a>
+        <a href="perfil.html">Perfil</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="contenedor" id="detalleEmprendimiento">
+
+    <a href="inicio.html" class="emp__volver">← Volver a emprendimientos</a>
+
+    <!-- Encabezado con la información del emprendimiento -->
+    <section class="emp__encabezado">
+      <div class="emp__encabezado-top">
+        <div>
+          <span class="chip-categoria" id="empCategoria"></span>
+          <h1 id="empNombre"></h1>
+          <p id="empDescripcion"></p>
+        </div>
+        <button id="btnFavoritoDetalle" class="btn btn-primario">🤍 Agregar a favoritos</button>
+      </div>
+
+      <div class="emp__detalle-lista">
+        <div><strong>Horario de atención</strong><span id="empHorario"></span></div>
+        <div><strong>Medios de pago</strong><span id="empMediosPago"></span></div>
+      </div>
+
+      <h3 style="margin-top: var(--espacio-md);">Promociones</h3>
+      <ul class="emp__promociones" id="empPromociones"></ul>
+    </section>
+
+    <!-- Productos del emprendimiento -->
+    <h2 class="inicio__seccion-titulo">Productos</h2>
+    <div class="grid-productos" id="listaProductosEmprendimiento"></div>
+
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="../js/app.js"></script>
+  <script src="../js/favoritos.js"></script>
+  <script src="../js/carrito.js"></script>
+  <script src="../js/productos.js"></script>
+</body>
+</html>

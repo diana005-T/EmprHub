@@ -1,0 +1,183 @@
+/* ==========================================================================
+   EmpreHub - emprendedor.css
+   Estilos de las pantallas del EMPRENDEDOR:
+   panel.html, mi-emprendimiento.html, productos.html, pedidos.html
+   ========================================================================== */
+
+.panel {
+  display: flex;
+  min-height: calc(100vh - 65px);
+}
+
+/* --- Menú lateral (se convierte en fila de botones en celular) --- */
+.panel__menu {
+  width: 220px;
+  background-color: var(--color-blanco);
+  box-shadow: 2px 0 8px rgba(0,0,0,0.05);
+  padding: var(--espacio-lg) 0;
+  flex-shrink: 0;
+}
+
+.panel__menu a,
+.panel__menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px var(--espacio-lg);
+  font-weight: 600;
+  color: var(--color-gris-oscuro);
+  background: none;
+}
+
+.panel__menu a.activo {
+  color: var(--color-azul);
+  background-color: var(--color-celeste-claro);
+  border-right: 4px solid var(--color-azul);
+}
+
+.panel__contenido {
+  flex: 1;
+  padding: var(--espacio-lg);
+}
+
+@media (max-width: 768px) {
+  .panel {
+    flex-direction: column;
+  }
+
+  .panel__menu {
+    width: 100%;
+    display: flex;
+    overflow-x: auto;
+    padding: var(--espacio-sm);
+  }
+
+  .panel__menu a,
+  .panel__menu button {
+    width: auto;
+    white-space: nowrap;
+    border-right: none !important;
+    border-radius: var(--borde-radius-chico);
+  }
+
+  .panel__menu a.activo {
+    background-color: var(--color-verde-claro);
+  }
+}
+
+/* --- Tarjetas de resumen del panel principal --- */
+.panel__resumen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--espacio-md);
+  margin-bottom: var(--espacio-lg);
+}
+
+.panel__resumen-tarjeta {
+  background-color: var(--color-blanco);
+  border-radius: var(--borde-radius);
+  box-shadow: var(--sombra-suave);
+  padding: var(--espacio-lg);
+  text-align: center;
+}
+
+.panel__resumen-tarjeta strong {
+  display: block;
+  font-size: 2rem;
+  color: var(--color-azul);
+}
+
+/* --- Checkboxes de medios de pago --- */
+.checkbox-grupo {
+  display: flex;
+  gap: var(--espacio-md);
+  flex-wrap: wrap;
+}
+
+.checkbox-grupo label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  background-color: var(--color-celeste-claro);
+  padding: 8px 14px;
+  border-radius: 20px;
+}
+
+.checkbox-grupo input {
+  width: auto;
+}
+
+/* --- Tabla / lista de productos del emprendedor --- */
+.lista-productos-admin {
+  display: grid;
+  gap: var(--espacio-sm);
+}
+
+.producto-admin {
+  background-color: var(--color-blanco);
+  border-radius: var(--borde-radius-chico);
+  box-shadow: var(--sombra-suave);
+  padding: var(--espacio-md);
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto;
+  align-items: center;
+  gap: var(--espacio-md);
+}
+
+.producto-admin__nombre strong {
+  display: block;
+}
+
+.producto-admin__nombre span {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+@media (max-width: 700px) {
+  .producto-admin {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* --- Tarjeta de pedido del emprendedor --- */
+.pedido-admin {
+  background-color: var(--color-blanco);
+  border-radius: var(--borde-radius);
+  box-shadow: var(--sombra-suave);
+  padding: var(--espacio-md) var(--espacio-lg);
+  margin-bottom: var(--espacio-md);
+}
+
+.pedido-admin__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--espacio-sm);
+  margin-bottom: var(--espacio-sm);
+}
+
+.pedido-admin__numero {
+  font-weight: 700;
+  color: var(--color-azul);
+}
+
+.estado-select {
+  padding: 6px 10px;
+  border-radius: var(--borde-radius-chico);
+  border: 2px solid #E0E0E0;
+  font-weight: 600;
+}
+
+.pedido-admin__lista {
+  margin: var(--espacio-sm) 0;
+  padding-left: 18px;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.pedido-admin__datos {
+  font-size: 0.85rem;
+  color: #777;
+}

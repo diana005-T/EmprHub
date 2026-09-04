@@ -1,0 +1,139 @@
+/* ==========================================================================
+   EmpreHub - inicio.css
+   Estilos de la PANTALLA PRINCIPAL DEL CLIENTE (pages/inicio.html):
+   buscador, categorías y listado de emprendimientos.
+   ========================================================================== */
+
+.inicio__buscador {
+  padding: var(--espacio-lg) 0 var(--espacio-md);
+}
+
+.inicio__buscador input {
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: 30px;
+  border: 2px solid #E0E0E0;
+  font-size: 1rem;
+  background-color: var(--color-blanco);
+}
+
+.inicio__buscador input:focus {
+  outline: none;
+  border-color: var(--color-azul);
+}
+
+/* --- Fila de categorías (scrollable en celular) --- */
+.categorias {
+  display: flex;
+  gap: var(--espacio-sm);
+  overflow-x: auto;
+  padding-bottom: var(--espacio-md);
+  margin-bottom: var(--espacio-md);
+}
+
+.categoria {
+  background-color: var(--color-blanco);
+  border: 2px solid var(--color-celeste-claro);
+  border-radius: 30px;
+  padding: 8px 16px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--color-gris-oscuro);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.categoria--activa {
+  background-color: var(--color-azul);
+  border-color: var(--color-azul);
+  color: var(--color-blanco);
+}
+
+/* --- Grid de tarjetas de emprendimientos --- */
+.inicio__seccion-titulo {
+  margin-bottom: var(--espacio-md);
+}
+
+.grid-emprendimientos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--espacio-md);
+  padding-bottom: var(--espacio-xl);
+}
+
+.tarjeta-emprendimiento {
+  position: relative;
+}
+
+.tarjeta-emprendimiento__imagen {
+  height: 130px;
+  background-color: var(--color-celeste-claro);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+}
+
+.tarjeta-emprendimiento__favorito {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: var(--color-blanco);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 1.1rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tarjeta-emprendimiento__info {
+  padding: var(--espacio-md);
+}
+
+.tarjeta-emprendimiento__info h3 {
+  margin: 6px 0;
+}
+
+.tarjeta-emprendimiento__info p {
+  font-size: 0.9rem;
+  margin-bottom: var(--espacio-md);
+}
+
+.chip-categoria {
+  display: inline-block;
+  background-color: var(--color-verde-claro);
+  color: #2E7D32;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+/* --- Tarjeta de producto (se reutiliza en emprendimiento.html) --- */
+.tarjeta-producto__imagen {
+  height: 100px;
+  background-color: var(--color-celeste-claro);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.4rem;
+}
+
+.tarjeta-producto__info {
+  padding: var(--espacio-md);
+}
+
+.tarjeta-producto__precio {
+  font-weight: 700;
+  color: var(--color-azul);
+  font-size: 1.1rem;
+  margin: 6px 0 2px;
+}
+
+.tarjeta-producto__stock {
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: var(--espacio-md);
+}

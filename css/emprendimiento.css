@@ -1,0 +1,68 @@
+/* ==========================================================================
+   EmpreHub - emprendimiento.css
+   Estilos del DETALLE DE UN EMPRENDIMIENTO (pages/emprendimiento.html)
+   ========================================================================== */
+
+.emp__volver {
+  display: inline-block;
+  margin: var(--espacio-md) 0;
+  font-weight: 600;
+  color: var(--color-azul);
+}
+
+.emp__encabezado {
+  background-color: var(--color-blanco);
+  border-radius: var(--borde-radius);
+  box-shadow: var(--sombra-suave);
+  padding: var(--espacio-lg);
+  margin-bottom: var(--espacio-lg);
+}
+
+.emp__encabezado-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--espacio-md);
+  flex-wrap: wrap;
+}
+
+.emp__encabezado h1 {
+  margin: 6px 0;
+}
+
+.emp__detalle-lista {
+  margin-top: var(--espacio-md);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--espacio-md);
+}
+
+.emp__detalle-lista div {
+  background-color: var(--color-celeste-claro);
+  border-radius: var(--borde-radius-chico);
+  padding: 10px 14px;
+}
+
+.emp__detalle-lista strong {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--color-azul);
+  margin-bottom: 2px;
+}
+
+.emp__promociones {
+  margin-top: var(--espacio-md);
+  padding-left: 18px;
+}
+
+.emp__promociones li {
+  margin-bottom: 4px;
+  color: #555;
+}
+
+.grid-productos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--espacio-md);
+  padding-bottom: var(--espacio-xl);
+}

@@ -1,0 +1,464 @@
+/* ==========================================================================
+   EmpreHub - style.css
+   Hoja de estilos GENERAL del proyecto.
+   Aquí van: variables de color, reset básico, tipografía, botones y
+   utilidades responsive que se reutilizan en TODAS las páginas.
+   Cada pantalla tiene además su propio CSS (login.css, inicio.css, etc.)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1) VARIABLES DE COLOR (paleta oficial de EmpreHub)
+   Usamos variables CSS (--nombre) para no repetir códigos de color y para
+   poder cambiar el tema del proyecto desde un solo lugar.
+   -------------------------------------------------------------------------- */
+:root {
+  --color-azul: #2F80D1;
+  --color-verde: #55B94A;
+  --color-verde-claro: #DFF3D8;
+  --color-celeste-claro: #EAF6FF;
+  --color-amarillo: #FFD34E;
+  --color-rosado: #F29AB2;
+  --color-blanco: #FFFFFF;
+  --color-gris-oscuro: #333333;
+
+  /* Sombras y bordes reutilizables */
+  --sombra-suave: 0 4px 14px rgba(47, 128, 209, 0.15);
+  --borde-radius: 16px;
+  --borde-radius-chico: 10px;
+
+  /* Espaciados reutilizables */
+  --espacio-sm: 8px;
+  --espacio-md: 16px;
+  --espacio-lg: 24px;
+  --espacio-xl: 40px;
+}
+
+/* --------------------------------------------------------------------------
+   2) RESET BÁSICO
+   Quitamos márgenes/paddings por defecto del navegador para tener un
+   punto de partida limpio e igual en todos los navegadores.
+   -------------------------------------------------------------------------- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box; /* el padding y el borde no aumentan el ancho total */
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+  color: var(--color-gris-oscuro);
+  background-color: var(--color-celeste-claro);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+ul {
+  list-style: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+}
+
+input, select, textarea {
+  font-family: inherit;
+}
+
+/* --------------------------------------------------------------------------
+   3) TIPOGRAFÍA GENERAL
+   -------------------------------------------------------------------------- */
+h1, h2, h3 {
+  font-weight: 700;
+  color: var(--color-gris-oscuro);
+}
+
+p {
+  color: #555;
+}
+
+/* --------------------------------------------------------------------------
+   4) CONTENEDOR GENERAL
+   Clase reutilizable para centrar el contenido y darle un ancho máximo.
+   -------------------------------------------------------------------------- */
+.contenedor {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 var(--espacio-md);
+}
+
+/* --------------------------------------------------------------------------
+   5) BOTONES REUTILIZABLES
+   .btn es la base; se combina con .btn-primario, .btn-secundario, etc.
+   -------------------------------------------------------------------------- */
+.btn {
+  display: inline-block;
+  padding: 14px 28px;
+  border-radius: var(--borde-radius-chico);
+  font-size: 1rem;
+  font-weight: 600;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  text-align: center;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--sombra-suave);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-primario {
+  background-color: var(--color-azul);
+  color: var(--color-blanco);
+}
+
+.btn-secundario {
+  background-color: var(--color-verde);
+  color: var(--color-blanco);
+}
+
+.btn-alerta {
+  background-color: #E85D5D;
+  color: var(--color-blanco);
+}
+
+.btn-bloque {
+  display: block;
+  width: 100%;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* --------------------------------------------------------------------------
+   6) TARJETAS (card) - se usan en emprendimientos, productos, pedidos, etc.
+   -------------------------------------------------------------------------- */
+.card {
+  background-color: var(--color-blanco);
+  border-radius: var(--borde-radius);
+  box-shadow: var(--sombra-suave);
+  overflow: hidden;
+  transition: transform 0.15s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+}
+
+/* --------------------------------------------------------------------------
+   7) MENSAJES DE ÉXITO / ERROR (usados en formularios de todo el proyecto)
+   -------------------------------------------------------------------------- */
+.mensaje {
+  padding: 10px 14px;
+  border-radius: var(--borde-radius-chico);
+  font-size: 0.9rem;
+  margin-top: var(--espacio-sm);
+}
+
+.mensaje-error {
+  background-color: #FDEAEA;
+  color: #C0392B;
+  border: 1px solid #F5B7B1;
+}
+
+.mensaje-exito {
+  background-color: var(--color-verde-claro);
+  color: #2E7D32;
+  border: 1px solid var(--color-verde);
+}
+
+/* Texto de error pequeño debajo de un campo específico del formulario */
+.error-campo {
+  display: block;
+  color: #C0392B;
+  font-size: 0.8rem;
+  margin-top: 4px;
+  min-height: 16px; /* reserva espacio para que el formulario no "salte" */
+}
+
+/* --------------------------------------------------------------------------
+   8) UTILIDADES GENERALES
+   -------------------------------------------------------------------------- */
+.oculto {
+  display: none !important;
+}
+
+.texto-centro {
+  text-align: center;
+}
+
+.flex {
+  display: flex;
+  align-items: center;
+}
+
+.flex-columna {
+  display: flex;
+  flex-direction: column;
+}
+
+.espacio-entre {
+  justify-content: space-between;
+}
+
+/* --------------------------------------------------------------------------
+   10) PANTALLA DE BIENVENIDA (index.html)
+   Como la bienvenida no tiene un CSS propio en la estructura del proyecto,
+   sus estilos viven aquí, en el CSS general.
+   -------------------------------------------------------------------------- */
+.bienvenida {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--espacio-xl) var(--espacio-md);
+  background: linear-gradient(180deg, var(--color-celeste-claro) 0%, var(--color-blanco) 100%);
+}
+
+.bienvenida__logo {
+  width: 170px;
+  margin-bottom: var(--espacio-sm);
+}
+
+.bienvenida__eslogan {
+  font-size: 1.6rem;
+  color: var(--color-azul);
+  max-width: 480px;
+  margin-bottom: var(--espacio-sm);
+}
+
+.bienvenida__frase {
+  font-size: 1rem;
+  color: #555;
+  max-width: 420px;
+  margin-bottom: var(--espacio-lg);
+}
+
+.bienvenida .btn {
+  font-size: 1.05rem;
+  padding: 16px 40px;
+}
+
+@media (max-width: 480px) {
+  .bienvenida__logo { width: 130px; }
+  .bienvenida__eslogan { font-size: 1.3rem; }
+  .bienvenida .btn { width: 100%; }
+}
+
+/* --------------------------------------------------------------------------
+   11) HEADER / NAV COMPARTIDO (pages de cliente y emprendedor)
+   -------------------------------------------------------------------------- */
+.header {
+  background-color: var(--color-blanco);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header__contenido {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px var(--espacio-md);
+}
+
+.header__logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header__logo img {
+  height: 42px;
+}
+
+.header__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-md);
+}
+
+.header__nav a {
+  font-weight: 600;
+  color: var(--color-gris-oscuro);
+  padding: 6px 4px;
+  position: relative;
+}
+
+.header__nav a.activo {
+  color: var(--color-azul);
+  border-bottom: 3px solid var(--color-azul);
+}
+
+.header__icono {
+  position: relative;
+  font-size: 1.3rem;
+}
+
+.badge {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+  background-color: var(--color-rosado);
+  color: var(--color-blanco);
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 50%;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+/* Botón hamburguesa: solo visible en celular */
+.header__hamburguesa {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  background: none;
+  padding: 6px;
+}
+
+.header__hamburguesa span {
+  width: 24px;
+  height: 3px;
+  background-color: var(--color-gris-oscuro);
+  border-radius: 2px;
+}
+
+@media (max-width: 768px) {
+  .header__hamburguesa {
+    display: flex;
+  }
+
+  .header__nav {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: var(--color-blanco);
+    flex-direction: column;
+    align-items: flex-start;
+    padding: var(--espacio-md);
+    gap: var(--espacio-md);
+    box-shadow: 0 6px 10px rgba(0,0,0,0.08);
+    display: none;
+  }
+
+  .header__nav.header__nav--abierto {
+    display: flex;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   12) TOASTS (indicador flotante, ej: "Producto agregado al carrito")
+   -------------------------------------------------------------------------- */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background-color: var(--color-gris-oscuro);
+  color: var(--color-blanco);
+  padding: 12px 22px;
+  border-radius: var(--borde-radius-chico);
+  font-size: 0.9rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 999;
+}
+
+.toast.toast--visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* --------------------------------------------------------------------------
+   13) MODAL DE CONFIRMACIÓN (ej: eliminar producto)
+   -------------------------------------------------------------------------- */
+.modal-fondo {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--espacio-md);
+  z-index: 1000;
+}
+
+.modal {
+  background-color: var(--color-blanco);
+  border-radius: var(--borde-radius);
+  padding: var(--espacio-lg);
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+}
+
+.modal p {
+  margin: var(--espacio-md) 0 var(--espacio-lg);
+  color: var(--color-gris-oscuro);
+}
+
+.modal__acciones {
+  display: flex;
+  gap: var(--espacio-sm);
+}
+
+.modal__acciones .btn {
+  flex: 1;
+}
+
+/* --------------------------------------------------------------------------
+   14) ESTADO VACÍO (ej: "Tu carrito está vacío")
+   -------------------------------------------------------------------------- */
+.estado-vacio {
+  text-align: center;
+  padding: var(--espacio-xl) var(--espacio-md);
+  color: #777;
+}
+
+.estado-vacio__icono {
+  font-size: 2.5rem;
+  margin-bottom: var(--espacio-sm);
+}
+
+/* --------------------------------------------------------------------------
+   15) RESPONSIVE - reglas generales
+   Cada CSS específico agrega sus propias media queries; aquí solo van
+   ajustes generales de espaciado en pantallas chicas.
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .contenedor {
+    padding: 0 var(--espacio-sm);
+  }
+}

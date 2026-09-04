@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EmpreHub - Carrito</title>
+
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/inicio.css">
+  <link rel="stylesheet" href="../css/carrito.css">
+</head>
+<body>
+
+  <header class="header">
+    <div class="header__contenido contenedor">
+      <a href="inicio.html" class="header__logo">
+        <img src="../img/logo.png" alt="EmpreHub">
+      </a>
+      <button class="header__hamburguesa" aria-label="Abrir menú">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="header__nav">
+        <a href="inicio.html">Inicio</a>
+        <a href="favoritos.html">Favoritos</a>
+        <a href="carrito.html" class="activo header__icono">
+          🛒 Carrito <span id="badgeCarrito" class="badge oculto">0</span>
+        </a>
+        <a href="perfil.html">Perfil</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="contenedor">
+
+    <!-- ============================================================
+         PASO 1: CARRITO
+    ============================================================ -->
+    <section id="pasoCarrito">
+      <h2 class="inicio__seccion-titulo" style="margin-top: var(--espacio-lg);">Tu carrito</h2>
+
+      <div id="listaCarrito"></div>
+
+      <div id="carritoTotales" class="carrito__totales oculto">
+        <div class="carrito__totales-linea">
+          <span>Total</span>
+          <span id="carritoTotal">S/ 0.00</span>
+        </div>
+        <div class="carrito__acciones">
+          <button id="btnVaciarCarrito" class="btn btn-alerta">Vaciar carrito</button>
+          <button id="btnIrCheckout" class="btn btn-primario">Realizar pedido</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PASO 2: DATOS DE ENTREGA (CHECKOUT)
+    ============================================================ -->
+    <section id="pasoCheckout" class="oculto">
+      <div class="tarjeta-formulario">
+        <h2>Datos de entrega</h2>
+        <form id="formCheckout" novalidate>
+
+          <div class="campo">
+            <label for="checkoutNombre">Nombre completo</label>
+            <input type="text" id="checkoutNombre" placeholder="Tu nombre">
+            <span class="error-campo" id="errorCheckoutNombre"></span>
+          </div>
+
+          <div class="campo">
+            <label for="checkoutTelefono">Teléfono (9 dígitos)</label>
+            <input type="text" id="checkoutTelefono" maxlength="9" placeholder="987654321">
+            <span class="error-campo" id="errorCheckoutTelefono"></span>
+          </div>
+
+          <div class="campo">
+            <label for="checkoutDireccion">Dirección</label>
+            <input type="text" id="checkoutDireccion" placeholder="Av. Ejemplo 123">
+            <span class="error-campo" id="errorCheckoutDireccion"></span>
+          </div>
+
+          <div class="campo">
+            <label for="checkoutMetodoPago">Método de pago</label>
+            <select id="checkoutMetodoPago">
+              <option value="">Selecciona una opción</option>
+              <option value="Yape">Yape</option>
+              <option value="Plin">Plin</option>
+              <option value="Efectivo">Efectivo</option>
+            </select>
+            <span class="error-campo" id="errorCheckoutMetodoPago"></span>
+          </div>
+
+          <div class="carrito__acciones">
+            <button type="button" id="btnVolverCarrito" class="btn btn-secundario">Volver</button>
+            <button type="submit" class="btn btn-primario">Ver resumen</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PASO 3: RESUMEN DEL PEDIDO
+    ============================================================ -->
+    <section id="pasoResumen" class="oculto">
+      <div class="tarjeta-formulario">
+        <h2>Resumen del pedido</h2>
+
+        <div id="resumenProductos" style="margin: var(--espacio-md) 0;"></div>
+
+        <div class="resumen-linea" style="font-weight:700; font-size:1.1rem;">
+          <span>Total</span>
+          <span id="resumenTotal"></span>
+        </div>
+
+        <div style="margin-top: var(--espacio-md);">
+          <div class="resumen-dato"><strong>Nombre</strong><span id="resumenNombre"></span></div>
+          <div class="resumen-dato"><strong>Teléfono</strong><span id="resumenTelefono"></span></div>
+          <div class="resumen-dato"><strong>Dirección</strong><span id="resumenDireccion"></span></div>
+          <div class="resumen-dato"><strong>Método de pago</strong><span id="resumenMetodoPago"></span></div>
+        </div>
+
+        <div class="carrito__acciones" style="margin-top: var(--espacio-lg);">
+          <button type="button" id="btnVolverCheckout" class="btn btn-secundario">Volver</button>
+          <button type="button" id="btnConfirmarPedido" class="btn btn-primario">Confirmar pedido</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PASO 4: PEDIDO CONFIRMADO
+    ============================================================ -->
+    <section id="pasoExito" class="oculto">
+      <div class="pedido-exito">
+        <div class="pedido-exito__icono">🎉</div>
+        <h2>¡Pedido realizado correctamente!</h2>
+        <p>Número de pedido: <strong id="numeroPedidoExito"></strong></p>
+        <a href="inicio.html" class="btn btn-primario" style="margin-top: var(--espacio-lg);">Volver al inicio</a>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="../js/app.js"></script>
+  <script src="../js/favoritos.js"></script>
+  <script src="../js/carrito.js"></script>
+</body>
+</html>

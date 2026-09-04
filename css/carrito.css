@@ -1,0 +1,119 @@
+/* ==========================================================================
+   EmpreHub - carrito.css
+   Estilos del CARRITO y el flujo de PEDIDO (pages/carrito.html)
+   ========================================================================== */
+
+.item-carrito {
+  background-color: var(--color-blanco);
+  border-radius: var(--borde-radius-chico);
+  box-shadow: var(--sombra-suave);
+  padding: var(--espacio-md);
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: var(--espacio-md);
+  margin-bottom: var(--espacio-sm);
+}
+
+.item-carrito__info span {
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.item-carrito__cantidad {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.item-carrito__cantidad button {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: var(--color-celeste-claro);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.item-carrito__subtotal {
+  font-weight: 700;
+  color: var(--color-azul);
+  min-width: 80px;
+  text-align: right;
+}
+
+.item-carrito__eliminar {
+  background: none;
+  font-size: 1.1rem;
+}
+
+.carrito__totales {
+  background-color: var(--color-blanco);
+  border-radius: var(--borde-radius);
+  box-shadow: var(--sombra-suave);
+  padding: var(--espacio-lg);
+  margin-top: var(--espacio-lg);
+}
+
+.carrito__totales-linea {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: var(--espacio-md);
+}
+
+.carrito__acciones {
+  display: flex;
+  gap: var(--espacio-sm);
+}
+
+.carrito__acciones .btn {
+  flex: 1;
+}
+
+/* --- Checkout y resumen --- */
+.tarjeta-formulario {
+  background-color: var(--color-blanco);
+  border-radius: var(--borde-radius);
+  box-shadow: var(--sombra-suave);
+  padding: var(--espacio-lg);
+  max-width: 480px;
+  margin: var(--espacio-lg) auto;
+}
+
+.resumen-linea {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-celeste-claro);
+  font-size: 0.95rem;
+}
+
+.resumen-dato {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 0.9rem;
+}
+
+.resumen-dato strong {
+  color: var(--color-gris-oscuro);
+}
+
+.pedido-exito {
+  text-align: center;
+  padding: var(--espacio-xl) var(--espacio-md);
+}
+
+.pedido-exito__icono {
+  font-size: 3.5rem;
+  margin-bottom: var(--espacio-md);
+}
+
+@media (max-width: 600px) {
+  .item-carrito {
+    grid-template-columns: 1fr auto;
+    row-gap: 8px;
+  }
+}

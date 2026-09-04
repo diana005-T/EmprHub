@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EmpreHub - Inicio</title>
+
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/inicio.css">
+</head>
+<body>
+
+  <!-- ============================================================
+       HEADER / NAV (compartido por todas las páginas de cliente)
+  ============================================================ -->
+  <header class="header">
+    <div class="header__contenido contenedor">
+      <a href="inicio.html" class="header__logo">
+        <img src="../img/logo.png" alt="EmpreHub">
+      </a>
+
+      <button class="header__hamburguesa" aria-label="Abrir menú">
+        <span></span><span></span><span></span>
+      </button>
+
+      <nav class="header__nav">
+        <a href="inicio.html" class="activo">Inicio</a>
+        <a href="favoritos.html">Favoritos</a>
+        <a href="carrito.html" class="header__icono">
+          🛒 Carrito <span id="badgeCarrito" class="badge oculto">0</span>
+        </a>
+        <a href="perfil.html">Perfil</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="contenedor">
+
+    <!-- Buscador -->
+    <div class="inicio__buscador">
+      <input type="text" id="inputBuscar" placeholder="Buscar producto, emprendimiento o categoría...">
+    </div>
+
+    <!-- Categorías -->
+    <div class="categorias" id="listaCategorias"></div>
+
+    <!-- Listado de emprendimientos -->
+    <h2 class="inicio__seccion-titulo">Emprendimientos</h2>
+    <div class="grid-emprendimientos" id="listaEmprendimientos"></div>
+
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="../js/app.js"></script>
+  <script src="../js/favoritos.js"></script>
+  <script src="../js/carrito.js"></script>
+  <script src="../js/productos.js"></script>
+</body>
+</html>
