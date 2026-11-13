@@ -66,7 +66,9 @@ const migrationFiles = [
   'supabase/migrations/003_security_rls.sql',
   'supabase/migrations/004_functions_rpc.sql',
   'supabase/migrations/005_storage_setup.sql',
-  'supabase/migrations/006_seed_data.sql'
+  'supabase/migrations/006_seed_data.sql',
+  'supabase/migrations/007_security_rls_and_categories.sql',
+  'supabase/migrations/008_effective_privileges_and_order_transitions.sql'
 ];
 
 migrationFiles.forEach(file => {
@@ -78,6 +80,9 @@ const schemaSql = fs.readFileSync(path.join(__dirname, '..', 'supabase/migration
 const rlsSql = fs.readFileSync(path.join(__dirname, '..', 'supabase/migrations/003_security_rls.sql'), 'utf8');
 const rpcSql = fs.readFileSync(path.join(__dirname, '..', 'supabase/migrations/004_functions_rpc.sql'), 'utf8');
 const triggersSql = fs.readFileSync(path.join(__dirname, '..', 'supabase/migrations/002_triggers_and_rules.sql'), 'utf8');
+const securityFixSql = fs.readFileSync(path.join(__dirname, '..', 'supabase/migrations/007_security_rls_and_categories.sql'), 'utf8');
+const securityHardeningSql = fs.readFileSync(path.join(__dirname, '..', 'supabase/migrations/008_effective_privileges_and_order_transitions.sql'), 'utf8');
+const supabaseClientCode = fs.readFileSync(path.join(__dirname, '..', 'js/supabase-client.js'), 'utf8');
 
 const requiredTables = [
   'profiles',
@@ -100,6 +105,46 @@ requiredTables.forEach(table => {
 
 assert(rpcSql.includes('CREATE OR REPLACE FUNCTION public.create_order_atomic'), 'Función RPC transaccional create_order_atomic definida');
 assert(rpcSql.includes('FOR UPDATE'), 'Bloqueo pesimista de stock implementado en create_order_atomic');
+assert(securityFixSql.includes('DROP POLICY IF EXISTS "orders_insert_customer"'), 'Se elimina la política que permitía insertar pedidos directamente');
+assert(securityFixSql.includes('GRANT UPDATE (status) ON TABLE public.orders TO authenticated'), 'Solo se concede actualización directa de estado a usuarios autenticados');
+assert(securityFixSql.includes('REVOKE INSERT, UPDATE, DELETE ON TABLE public.order_items'), 'Se bloquean escrituras directas de detalles de pedidos');
+assert(securityFixSql.includes('SET search_path = pg_catalog'), 'La función auxiliar SECURITY DEFINER usa un search_path seguro');
+assert(securityFixSql.includes('TO anon, authenticated'), 'El catálogo público puede evaluar la función auxiliar de membresía');
+assert(securityFixSql.includes('public.current_user_is_business_member(id)'), 'La lectura de negocios comprueba membresía sin recursión RLS');
+assert(securityFixSql.includes('GRANT INSERT (owner_id, category_id, name, description, operating_hours, payment_methods)'), 'La creación de negocios solo permite columnas controladas');
+assert(securityHardeningSql.includes('REVOKE ALL PRIVILEGES ON TABLE public.businesses, public.orders, public.order_items'), 'La migración 008 revoca los permisos amplios de tabla');
+assert(!securityHardeningSql.includes('GRANT UPDATE (status) ON TABLE public.orders'), 'La migración 008 no permite eludir la RPC con UPDATE directo de estado');
+assert(securityHardeningSql.includes('TRUNCATE'), 'La migración 008 comprueba y bloquea TRUNCATE efectivo');
+assert(securityHardeningSql.includes('has_column_privilege'), 'La migración 008 comprueba permisos efectivos por columna');
+assert(securityHardeningSql.includes('rolsuper OR r.rolbypassrls'), 'La migración 008 valida propietarios SECURITY DEFINER con capacidad BYPASSRLS confiable');
+assert(securityHardeningSql.includes('GRANT SELECT (id, slug, name, description, status, logo_url, banner_url,'), 'El catálogo anónimo solo recibe columnas seleccionadas de businesses');
+assert(securityHardeningSql.includes('ON TABLE public.businesses TO authenticated;'), 'authenticated recibe SELECT de businesses por columnas');
+assert(!securityHardeningSql.includes('GRANT SELECT ON TABLE public.businesses'), 'authenticated no recibe SELECT de tabla completa sobre businesses');
+const authenticatedBusinessSelectGrant = securityHardeningSql.match(
+  /GRANT SELECT \(([^)]*)\)\s+ON TABLE public\.businesses TO authenticated;/
+);
+assert(Boolean(authenticatedBusinessSelectGrant), 'El SELECT de authenticated sobre businesses tiene una lista explícita de columnas');
+assert(
+  authenticatedBusinessSelectGrant && !authenticatedBusinessSelectGrant[1].includes('status_reason') &&
+    !authenticatedBusinessSelectGrant[1].includes('owner_id'),
+  'El SELECT directo de authenticated excluye status_reason y owner_id'
+);
+assert(securityHardeningSql.includes("has_column_privilege('authenticated', 'public.businesses'"), 'La migración detecta SELECT efectivo heredado de columnas internas para authenticated');
+assert(securityHardeningSql.includes('CREATE OR REPLACE FUNCTION public.get_businesses_for_management()'), 'Existe RPC para datos privados de negocios de propietario/admin');
+assert(securityHardeningSql.includes('WHERE v_is_admin OR b.owner_id = v_user_id'), 'El RPC limita filas privadas al propietario autenticado o al administrador');
+assert(securityHardeningSql.includes('v_user_id UUID := auth.uid()'), 'El RPC deriva la identidad desde la sesión autenticada');
+assert(securityHardeningSql.includes('to_jsonb(b)'), 'El RPC devuelve la fila completa solo después de comprobar el ámbito propietario/admin');
+assert(securityHardeningSql.includes('GRANT EXECUTE ON FUNCTION public.get_businesses_for_management() TO authenticated'), 'El RPC de gestión solo se concede al rol autenticado');
+const businessesClientCode = supabaseClientCode.slice(
+  supabaseClientCode.indexOf('EH_CLIENT.businesses = {'),
+  supabaseClientCode.indexOf('EH_CLIENT.products = {')
+);
+assert(businessesClientCode.includes("rpc('get_businesses_for_management')"), 'Los paneles obtienen datos privados de negocios mediante RPC');
+assert(!businessesClientCode.includes(".select(`\n          *,\n          category:"), 'Las consultas de gestión no hacen SELECT * directo sobre businesses');
+assert((businessesClientCode.match(/\.select\('id, slug, name, description, status, logo_url, banner_url, operating_hours, payment_methods, phone, address, plan, category_id, created_at'\)/g) || []).length === 2, 'Crear y editar negocios solo devuelven columnas públicas autorizadas');
+assert(securityHardeningSql.includes('public.update_order_status'), 'La migración 008 define la RPC de transición de estado');
+assert(securityHardeningSql.includes("p_new_status IN ('En camino', 'Cancelado')"), 'La RPC solo permite avanzar desde En preparación o cancelar');
+assert(securityHardeningSql.includes("p_new_status IN ('Entregado', 'Cancelado')"), 'La RPC solo permite entregar desde En camino o cancelar');
 assert(triggersSql.includes('trg_prevent_role_escalation'), 'Trigger de prevención de escalada de rol definido');
 assert(triggersSql.includes('trg_validate_business_free_plan'), 'Trigger de validación de plan gratuito (1 negocio) definido');
 assert(triggersSql.includes('trg_validate_products_free_plan'), 'Trigger de validación de plan gratuito (máx 20 productos) definido');

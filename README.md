@@ -76,8 +76,10 @@ Las migraciones deben aplicarse **en orden numérico** usando el **SQL Editor** 
 | 4 | [`supabase/migrations/004_functions_rpc.sql`](supabase/migrations/004_functions_rpc.sql) | Funciones RPC: checkout atómico, panel admin |
 | 5 | [`supabase/migrations/005_storage_setup.sql`](supabase/migrations/005_storage_setup.sql) | Bucket de Storage, tipos de archivo y límites |
 | 6 | [`supabase/migrations/006_seed_data.sql`](supabase/migrations/006_seed_data.sql) | Categorías iniciales y función para promover admin |
+| 7 | [`supabase/migrations/007_security_rls_and_categories.sql`](supabase/migrations/007_security_rls_and_categories.sql) | Evita recursión en políticas de membresía y restringe escrituras directas |
+| 8 | [`supabase/migrations/008_effective_privileges_and_order_transitions.sql`](supabase/migrations/008_effective_privileges_and_order_transitions.sql) | Endurece privilegios efectivos y valida las transiciones de pedidos mediante RPC |
 
-> **Nota:** Ejecuta los archivos uno por uno, no todos juntos. Verifica que cada uno muestre **"Success"** antes de pasar al siguiente.
+> **Nota:** Ejecuta los archivos uno por uno, no todos juntos. Verifica que cada uno muestre **"Success"** antes de pasar al siguiente. Prueba primero 001–008 en un proyecto Supabase de staging con roles y datos de prueba. La suite local no valida permisos efectivos, RLS ni funciones contra PostgreSQL/Supabase real; no apliques 007–008 en producción sin esa comprobación.
 
 ---
 
@@ -105,7 +107,7 @@ Una vez ejecutado, cierra sesión y vuelve a iniciar sesión. Serás redirigido 
 1. Asegúrate de que tus credenciales Supabase están en `js/supabase-config.js`.
 2. Haz commit y push de tus cambios a la rama `main` (u otra rama que uses para Pages).
 3. En tu repositorio de GitHub ve a **Settings → Pages**.
-4. En **Source** selecciona la rama y la carpeta raíz (`/ root`).
+4. En **Source** selecciona la rama que contiene la versión revisada y la carpeta raíz (`/ root`). No es necesario añadir un workflow de Actions para este sitio estático.
 5. Espera unos segundos y tu sitio estará en `https://tu-usuario.github.io/EmpreHub/`.
 
 > **Nota sobre `.env`:** GitHub Pages no procesa archivos `.env`. Las credenciales van directamente en `js/supabase-config.js`. La `anon public key` es de naturaleza pública y es segura para el frontend — las políticas RLS de Supabase protegen los datos.
@@ -154,10 +156,10 @@ EmpreHub/
 ├── img/
 │   └── logo.png
 ├── supabase/
-│   └── migrations/                     # 6 archivos SQL versionados
+│   └── migrations/                     # 8 archivos SQL versionados
 ├── test/
-│   ├── run_tests.js                    # 111 pruebas de estructura y seguridad
-│   └── test_functional_cart_checkout.js # 9 pruebas funcionales del carrito
+│   ├── run_tests.js                    # Suite técnica local
+│   └── test_functional_cart_checkout.js # Suite funcional del carrito y checkout demo
 └── .gitignore
 ```
 
@@ -201,4 +203,3 @@ La arquitectura está preparada para un futuro **plan Premium** sin pagos implem
 ---
 
 *EmpreHub — Hecho con ❤️ para los emprendedores del Perú.*
-

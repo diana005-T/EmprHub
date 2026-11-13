@@ -11,6 +11,13 @@
   'use strict';
 
   const EH_CLIENT = {};
+  const ORDER_STATUS_TRANSITIONS = {
+    'Pendiente': ['En preparación', 'Cancelado'],
+    'En preparación': ['En camino', 'Cancelado'],
+    'En camino': ['Entregado', 'Cancelado'],
+    'Entregado': [],
+    'Cancelado': []
+  };
 
   // Referencia al cliente nativo de Supabase
   let sb = null;
@@ -275,7 +282,20 @@
       const { data, error } = await sb
         .from('businesses')
         .select(`
-          *,
+          id,
+          slug,
+          name,
+          description,
+          status,
+          logo_url,
+          banner_url,
+          operating_hours,
+          payment_methods,
+          phone,
+          address,
+          plan,
+          category_id,
+          created_at,
           category:business_categories(id, name, icon),
           promotions(*)
         `)
@@ -292,14 +312,9 @@
         return fallbackBusinesses.getByOwner(ownerId);
       }
 
-      const { data, error } = await sb
-        .from('businesses')
-        .select(`
-          *,
-          category:business_categories(id, name, icon)
-        `)
-        .eq('owner_id', ownerId)
-        .order('created_at', { ascending: false });
+      // El RPC vincula la consulta al usuario autenticado y evita exponer
+      // columnas internas de otros negocios mediante SELECT directo.
+      const { data, error } = await sb.rpc('get_businesses_for_management');
 
       if (error) throw error;
       return data;
@@ -315,15 +330,18 @@
       if (!user) throw new Error('Debes iniciar sesión para crear un emprendimiento.');
 
       const payload = {
-        ...businessData,
         owner_id: user.id,
-        status: 'pending' // Siempre pendiente hasta revisión admin
+        name: businessData.name,
+        description: businessData.description,
+        category_id: businessData.category_id,
+        operating_hours: businessData.operating_hours,
+        payment_methods: businessData.payment_methods
       };
 
       const { data, error } = await sb
         .from('businesses')
         .insert([payload])
-        .select()
+        .select('id, slug, name, description, status, logo_url, banner_url, operating_hours, payment_methods, phone, address, plan, category_id, created_at')
         .single();
 
       if (error) throw error;
@@ -336,16 +354,19 @@
         return fallbackBusinesses.update(id, businessData);
       }
 
-      const safeData = { ...businessData };
-      delete safeData.id;
-      delete safeData.owner_id;
-      delete safeData.status; // El status solo lo cambia el admin
+      const safeData = {
+        name: businessData.name,
+        description: businessData.description,
+        category_id: businessData.category_id,
+        operating_hours: businessData.operating_hours,
+        payment_methods: businessData.payment_methods
+      };
 
       const { data, error } = await sb
         .from('businesses')
         .update(safeData)
         .eq('id', id)
-        .select()
+        .select('id, slug, name, description, status, logo_url, banner_url, operating_hours, payment_methods, phone, address, plan, category_id, created_at')
         .single();
 
       if (error) throw error;
@@ -358,14 +379,7 @@
         return fallbackBusinesses.getAllForAdmin();
       }
 
-      const { data, error } = await sb
-        .from('businesses')
-        .select(`
-          *,
-          owner:profiles!businesses_owner_id_fkey(id, email, full_name, phone),
-          category:business_categories(id, name, icon)
-        `)
-        .order('created_at', { ascending: false });
+      const { data, error } = await sb.rpc('get_businesses_for_management');
 
       if (error) throw error;
       return data;
@@ -863,12 +877,10 @@
         return fallbackOrders.updateStatus(orderId, newStatus);
       }
 
-      const { data, error } = await sb
-        .from('orders')
-        .update({ status: newStatus })
-        .eq('id', orderId)
-        .select()
-        .single();
+      const { data, error } = await sb.rpc('update_order_status', {
+        p_order_id: orderId,
+        p_new_status: newStatus
+      });
 
       if (error) throw error;
       return data;
@@ -1102,7 +1114,10 @@
         name: x.nombre,
         description: x.descripcion,
         status: x.status || 'published',
-        category: { name: x.categoria, icon: '🏪' }
+        category: { name: x.categoria, icon: '🏪' },
+        operating_hours: x.horario || '',
+        payment_methods: x.mediosPago || ['Yape', 'Plin', 'Efectivo'],
+        logo_url: x.logo_url || ''
       }));
     },
 
@@ -1110,6 +1125,7 @@
       const list = JSON.parse(localStorage.getItem('eh_emprendimientos') || '[]');
       const nuevo = {
         id: 'emp_' + Date.now(),
+        owner_id: data.owner_id,
         nombre: data.name,
         descripcion: data.description,
         categoria: data.category_id || 'Platos',
@@ -1130,6 +1146,7 @@
       if (b) {
         if (data.name) b.nombre = data.name;
         if (data.description) b.descripcion = data.description;
+        if (data.category_id) b.categoria = data.category_id;
         if (data.operating_hours) b.horario = data.operating_hours;
         if (data.payment_methods) b.mediosPago = data.payment_methods;
         localStorage.setItem('eh_emprendimientos', JSON.stringify(list));
@@ -1407,6 +1424,11 @@
       const orders = JSON.parse(localStorage.getItem('eh_pedidos') || '[]');
       const ord = orders.find(o => o.id === orderId || o.order_number === orderId || o.numero === orderId);
       if (ord) {
+        const currentStatus = ord.status || ord.estado || 'Pendiente';
+        const permittedTransitions = ORDER_STATUS_TRANSITIONS[currentStatus] || [];
+        if (newStatus !== currentStatus && !permittedTransitions.includes(newStatus)) {
+          throw new Error(`Transición de estado no permitida: ${currentStatus} -> ${newStatus}.`);
+        }
         ord.status = newStatus;
         localStorage.setItem('eh_pedidos', JSON.stringify(orders));
       }
@@ -1467,4 +1489,3 @@
   window.EH = window.EH || {};
   window.EH.client = EH_CLIENT;
 })();
-

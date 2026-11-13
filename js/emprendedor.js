@@ -111,6 +111,37 @@ document.addEventListener('DOMContentLoaded', async function () {
   if (formEmprendimiento) {
     const miEmp = await obtenerMiEmprendimiento();
     let logoFileSeleccionado = null;
+    const categoriaSelect = document.getElementById('empCategoriaInput');
+    const categoriaError = document.getElementById('errorEmpCategoria');
+
+    let categorias;
+    try {
+      categorias = await EH.client.categories.getAll();
+      if (!Array.isArray(categorias) || categorias.length === 0) {
+        throw new Error('No hay categorías disponibles.');
+      }
+    } catch (err) {
+      console.error('Error cargando categorías:', err);
+      categoriaError.textContent = 'No se pudieron cargar las categorías. Actualiza la página e inténtalo nuevamente.';
+      document.getElementById('btnGuardarEmprendimiento').disabled = true;
+      return;
+    }
+
+    categoriaSelect.innerHTML = '<option value="">Selecciona una categoría</option>';
+    categorias.forEach(categoria => {
+      const option = document.createElement('option');
+      option.value = EH.client.isLive ? categoria.id : categoria.name;
+      option.textContent = `${categoria.icon || ''} ${categoria.name}`.trim();
+      categoriaSelect.appendChild(option);
+    });
+
+    const categoriaActual = (miEmp && miEmp.category && miEmp.category.name) ||
+      (miEmp && miEmp.categoria) || '';
+    const categoriaActualId = miEmp && miEmp.category_id;
+    const categoriaPorNombre = categorias.find(categoria => categoria.name === categoriaActual);
+    categoriaSelect.value = EH.client.isLive
+      ? (categoriaActualId || (categoriaPorNombre && categoriaPorNombre.id) || '')
+      : categoriaActual;
 
     // Agregar campo de carga de Logo si no existe en el HTML
     let contenedorLogo = document.getElementById('campoLogoEmprendimiento');
@@ -143,7 +174,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (miEmp) {
       document.getElementById('empNombreInput').value = miEmp.name || miEmp.nombre || '';
       document.getElementById('empDescripcionInput').value = miEmp.description || miEmp.descripcion || '';
-      document.getElementById('empCategoriaInput').value = (miEmp.category && miEmp.category.name) || miEmp.categoria || '';
       document.getElementById('empHorarioInput').value = miEmp.operating_hours || miEmp.horario || '';
 
       const medios = miEmp.payment_methods || miEmp.mediosPago || [];
@@ -212,19 +242,17 @@ document.addEventListener('DOMContentLoaded', async function () {
             name: nombre,
             description: descripcion,
             category_id: categoria,
-            categoria: categoria,
             operating_hours: horario,
-            payment_methods: mediosPago,
-            mediosPago: mediosPago
+            payment_methods: mediosPago
           });
         } else {
           empGuardado = await EH.client.businesses.create({
+            owner_id: userId,
             name: nombre,
             description: descripcion,
             category_id: categoria,
             operating_hours: horario,
-            payment_methods: mediosPago,
-            plan: 'free'
+            payment_methods: mediosPago
           });
         }
 
@@ -486,7 +514,13 @@ document.addEventListener('DOMContentLoaded', async function () {
       return;
     }
 
-    const ESTADOS = ['Pendiente', 'En preparación', 'En camino', 'Entregado', 'Cancelado'];
+    const TRANSICIONES_ESTADO = {
+      'Pendiente': ['En preparación', 'Cancelado'],
+      'En preparación': ['En camino', 'Cancelado'],
+      'En camino': ['Entregado', 'Cancelado'],
+      'Entregado': [],
+      'Cancelado': []
+    };
 
     async function pintarPedidos() {
       listaPedidosAdmin.innerHTML = '<div class="estado-cargando"><div class="spinner"></div><p>Cargando pedidos recibidos...</p></div>';
@@ -503,6 +537,7 @@ document.addEventListener('DOMContentLoaded', async function () {
           const numero = p.order_number || p.numero || 'EH-0000';
           const fecha = p.created_at ? new Date(p.created_at).toLocaleString('es-PE') : (p.fecha || 'Reciente');
           const estadoActual = p.status || p.estado || 'Pendiente';
+          const estadosDisponibles = [estadoActual, ...(TRANSICIONES_ESTADO[estadoActual] || [])];
           const total = Number(p.total_amount || p.total || 0).toFixed(2);
           const items = p.items || p.productos || [];
 
@@ -512,8 +547,8 @@ document.addEventListener('DOMContentLoaded', async function () {
                 <span class="pedido-admin__numero">Pedido ${EH.escapeHtml(numero)} · <small>${EH.escapeHtml(fecha)}</small></span>
                 <div>
                   <label style="font-size:0.85rem; font-weight:600; margin-right:6px;">Estado:</label>
-                  <select class="estado-select" data-id="${EH.escapeHtml(p.id || numero)}" aria-label="Cambiar estado del pedido">
-                    ${ESTADOS.map(e => `<option value="${e}" ${e === estadoActual ? 'selected' : ''}>${e}</option>`).join('')}
+                  <select class="estado-select" data-id="${EH.escapeHtml(p.id || numero)}" data-estado-actual="${EH.escapeHtml(estadoActual)}" aria-label="Cambiar estado del pedido">
+                    ${estadosDisponibles.map(e => `<option value="${e}" ${e === estadoActual ? 'selected' : ''}>${e}</option>`).join('')}
                   </select>
                 </div>
               </div>
@@ -538,14 +573,21 @@ document.addEventListener('DOMContentLoaded', async function () {
         listaPedidosAdmin.querySelectorAll('.estado-select').forEach(select => {
           select.addEventListener('change', async function () {
             const pedidoId = select.dataset.id;
+            const estadoAnterior = select.dataset.estadoActual || select.value;
             const nuevoEstado = select.value;
             select.disabled = true;
 
             try {
               await EH.client.orders.updateStatus(pedidoId, nuevoEstado);
+              select.dataset.estadoActual = nuevoEstado;
+              const estadosDisponibles = [nuevoEstado, ...(TRANSICIONES_ESTADO[nuevoEstado] || [])];
+              select.innerHTML = estadosDisponibles
+                .map(estado => `<option value="${estado}" ${estado === nuevoEstado ? 'selected' : ''}>${estado}</option>`)
+                .join('');
               EH.toast(`Estado del pedido cambiado a "${nuevoEstado}".`);
             } catch (err) {
               console.error(err);
+              select.value = estadoAnterior;
               EH.toast('Error al actualizar el estado del pedido.');
             } finally {
               select.disabled = false;

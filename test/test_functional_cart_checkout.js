@@ -69,6 +69,20 @@ async function runFunctionalTests() {
 
   // 2. Agregar ítem al carrito
   const userId = 'usr_test_123';
+
+  const business = await client.businesses.create({
+    owner_id: userId,
+    name: 'Emprendimiento categoría',
+    description: 'Descripción de prueba de categoría',
+    category_id: 'Postres',
+    operating_hours: 'Lunes a viernes',
+    payment_methods: ['Yape']
+  });
+  await client.businesses.update(business.id, { category_id: 'Bebidas' });
+  const ownedBusinesses = await client.businesses.getByOwner(userId);
+  assert(ownedBusinesses[0].category.name === 'Bebidas', 'El modo demo conserva y actualiza la categoría del emprendimiento');
+  assert(ownedBusinesses[0].operating_hours === 'Lunes a viernes', 'El modo demo mantiene los datos del formulario al editar');
+
   await client.cart.addItem(userId, prodId, 2);
 
   let cartItems = await client.cart.get(userId);
@@ -103,6 +117,34 @@ async function runFunctionalTests() {
   assert(orderRes.order_number.startsWith('EH-'), 'Número de orden correlativo generado correctamente (' + orderRes.order_number + ')');
   assert(orderRes.total_amount === 75.00, 'Total calculado en servidor de forma exacta (3 x S/ 25.00 = S/ 75.00)');
 
+  let transitionRejected = false;
+  try {
+    await client.orders.updateStatus(orderRes.order_id, 'Entregado');
+  } catch (e) {
+    transitionRejected = true;
+  }
+  assert(transitionRejected, 'El modo demo impide saltar directamente de Pendiente a Entregado');
+  await client.orders.updateStatus(orderRes.order_id, 'En preparación');
+  await client.orders.updateStatus(orderRes.order_id, 'En camino');
+  await client.orders.updateStatus(orderRes.order_id, 'Entregado');
+  transitionRejected = false;
+  try {
+    await client.orders.updateStatus(orderRes.order_id, 'Cancelado');
+  } catch (e) {
+    transitionRejected = true;
+  }
+  assert(transitionRejected, 'El modo demo no permite cambiar un pedido Entregado terminal');
+
+  const cancelableOrder = { id: 'ord_cancel_test', status: 'Pendiente' };
+  const storedOrders = JSON.parse(localStorageMock.getItem('eh_pedidos'));
+  storedOrders.push(cancelableOrder);
+  localStorageMock.setItem('eh_pedidos', JSON.stringify(storedOrders));
+  const cancelledOrder = await client.orders.updateStatus(cancelableOrder.id, 'Cancelado');
+  assert(cancelledOrder.status === 'Cancelado', 'El modo demo permite cancelar un pedido pendiente');
+  const savedCancelableOrder = JSON.parse(localStorageMock.getItem('eh_pedidos'))
+    .find(order => order.id === cancelableOrder.id);
+  assert(savedCancelableOrder.status === 'Cancelado', 'La cancelación se guarda en localStorage');
+
   // 6. Verificar deducción atómica de stock en productos
   const prodsActualizados = JSON.parse(localStorageMock.getItem('eh_productos'));
   const prodActualizado = prodsActualizados.find(p => p.id === prodId);
@@ -118,4 +160,3 @@ async function runFunctionalTests() {
 }
 
 runFunctionalTests();
-
