@@ -2,23 +2,25 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <!-- Hace que la página se vea bien en celulares y tablets -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EmpreHub - Conectamos emprendimientos con personas</title>
 
-  <!-- CSS general del proyecto (colores, botones, tipografía, header, bienvenida, etc.) -->
+  <!-- Google Font: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
   <!-- ============================================================
        PANTALLA DE BIENVENIDA
-       Es la primera pantalla que ve cualquier usuario al entrar.
   ============================================================ -->
   <main class="bienvenida">
 
-    <!-- Logo de EmpreHub (imagen fija, no se modifica por código) -->
-    <img src="img/logo.png" alt="Logo de EmpreHub" class="bienvenida__logo">
+    <!-- Logo de EmpreHub -->
+    <img src="img/logo.png" alt="Logo de EmpreHub" class="bienvenida__logo" width="170" height="170">
 
     <!-- Eslogan del proyecto -->
     <h1 class="bienvenida__eslogan">Conectamos emprendimientos con personas</h1>
@@ -29,9 +31,9 @@
       de tu comunidad, o publica tu propio emprendimiento.
     </p>
 
-    <!-- Ilustración simple hecha en SVG (no requiere imagen externa) -->
-    <div class="bienvenida__ilustracion">
-      <svg viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">
+    <!-- Ilustración vectorial accesible -->
+    <div class="bienvenida__ilustracion" aria-hidden="true">
+      <svg viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Puestos de emprendimiento local">
         <!-- Suelo -->
         <rect x="0" y="170" width="300" height="30" fill="#DFF3D8"/>
 
@@ -52,12 +54,18 @@
       </svg>
     </div>
 
-    <!-- Botón que lleva al registro / inicio de sesión -->
-    <button id="btnContinuar" class="btn btn-primario">Continuar</button>
+    <!-- Botones de acción principales -->
+    <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:var(--espacio-md);">
+      <a href="pages/inicio.html" class="btn btn-primario" id="btnExplorarCatalogo">Explorar catálogo</a>
+      <a href="pages/registro.html" class="btn btn-secundario" id="btnIngresar">Iniciar sesión / Registrarme</a>
+    </div>
 
   </main>
 
-  <!-- JavaScript de esta pantalla -->
+  <!-- SDK Supabase y Módulos -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/supabase-client.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

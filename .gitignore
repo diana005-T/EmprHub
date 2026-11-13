@@ -1,0 +1,42 @@
+# ============================================================
+# EmpreHub — .gitignore
+# ============================================================
+
+# Dependencias de Node (pruebas locales)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Variables de entorno sensibles (si se usan localmente)
+.env
+.env.local
+.env.*.local
+
+# Supabase CLI local
+.supabase/
+
+# Editores y sistemas operativos
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# WebStorm / IntelliJ
+.idea/
+
+# Archivos temporales y de caché
+*.log
+*.tmp
+*.cache
+dist/
+build/
+.cache/
+
+# Archivos de configuración local sensibles
+config.local.js
+secrets.js
+

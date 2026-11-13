@@ -1,220 +1,324 @@
 /* ==========================================================================
    EmpreHub - productos.js
-   Este archivo maneja DOS pantallas relacionadas con emprendimientos y
-   productos:
-
-     A) pages/inicio.html         -> buscador, categorías, listado de tarjetas
-     B) pages/emprendimiento.html -> detalle de un emprendimiento y sus productos
-
-   Cada bloque revisa si sus elementos existen en la página antes de
-   ejecutarse, así un mismo archivo puede servir a las dos pantallas.
+   Manejo de Catálogo Público:
+     A) pages/inicio.html         -> Catálogo público de emprendimientos, filtros y buscador
+     B) pages/emprendimiento.html -> Perfil público del emprendimiento y sus productos
    ========================================================================== */
 
-// Categorías fijas del proyecto, con su ícono (emoji) para las tarjetas.
-const EH_CATEGORIAS = [
-  { nombre: 'Platos', icono: '🍽️' },
-  { nombre: 'Bebidas', icono: '🥤' },
-  { nombre: 'Productos', icono: '🛍️' },
-  { nombre: 'Postres', icono: '🧁' }
-];
-
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
 
   /* ==========================================================================
-     A) PANTALLA PRINCIPAL DEL CLIENTE (pages/inicio.html)
+     A) CATÁLOGO PRINCIPAL PÚBLICO (pages/inicio.html)
      ========================================================================== */
   const contenedorEmprendimientos = document.getElementById('listaEmprendimientos');
 
   if (contenedorEmprendimientos) {
-    // Protege la página: solo clientes con sesión activa pueden verla.
-    if (!EH.protegerPagina('cliente', 'registro.html')) return;
-
     const sesion = EH.sesion.obtener();
     const inputBuscar = document.getElementById('inputBuscar');
     const contenedorCategorias = document.getElementById('listaCategorias');
 
-    let categoriaActiva = 'Todas';
+    let categoriaActivaId = 'Todas';
+    let categorias = [];
 
-    // --- Pintar los botones de categoría ---
-    function pintarCategorias() {
-      let html = `<button class="categoria ${categoriaActiva === 'Todas' ? 'categoria--activa' : ''}" data-categoria="Todas">✨ Todas</button>`;
-      EH_CATEGORIAS.forEach(cat => {
-        html += `<button class="categoria ${categoriaActiva === cat.nombre ? 'categoria--activa' : ''}" data-categoria="${cat.nombre}">${cat.icono} ${cat.nombre}</button>`;
+    // Cargar categorías dinámicas
+    async function cargarCategorias() {
+      try {
+        if (EH.client && EH.client.categories) {
+          categorias = await EH.client.categories.getAll();
+        }
+      } catch (e) {
+        console.warn('Usando categorías por defecto:', e);
+        categorias = [
+          { id: 'Platos', name: 'Platos', icon: '🍽️' },
+          { id: 'Bebidas', name: 'Bebidas', icon: '🥤' },
+          { id: 'Productos', name: 'Productos', icon: '🛍️' },
+          { id: 'Postres', name: 'Postres', icon: '🧁' }
+        ];
+      }
+      pintarBotonesCategorias();
+    }
+
+    function pintarBotonesCategorias() {
+      let html = `<button class="categoria ${categoriaActivaId === 'Todas' ? 'categoria--activa' : ''}" data-id="Todas" type="button">✨ Todas</button>`;
+      categorias.forEach(cat => {
+        const catId = cat.id || cat.name;
+        const activa = (categoriaActivaId === catId || categoriaActivaId === cat.name) ? 'categoria--activa' : '';
+        html += `<button class="categoria ${activa}" data-id="${EH.escapeHtml(catId)}" type="button">${EH.escapeHtml(cat.icon || '📦')} ${EH.escapeHtml(cat.name)}</button>`;
       });
       contenedorCategorias.innerHTML = html;
 
-      // Cada botón de categoría filtra el listado al hacer clic.
       contenedorCategorias.querySelectorAll('.categoria').forEach(btn => {
         btn.addEventListener('click', function () {
-          categoriaActiva = btn.dataset.categoria;
-          pintarCategorias();
-          pintarEmprendimientos();
+          categoriaActivaId = btn.dataset.id;
+          pintarBotonesCategorias();
+          cargarEmprendimientos();
         });
       });
     }
 
-    // --- Pintar las tarjetas de emprendimientos según búsqueda + categoría ---
-    function pintarEmprendimientos() {
-      const emprendimientos = EH.storage.obtener('eh_emprendimientos', []);
-      const productos = EH.storage.obtener('eh_productos', []);
-      const textoBusqueda = inputBuscar.value.trim().toLowerCase();
+    async function cargarEmprendimientos() {
+      contenedorEmprendimientos.innerHTML = `
+        <div class="estado-cargando">
+          <div class="spinner"></div>
+          <p>Cargando emprendimientos...</p>
+        </div>`;
 
-      const resultado = emprendimientos.filter(emp => {
-        // Filtro de categoría
-        const coincideCategoria = categoriaActiva === 'Todas' || emp.categoria === categoriaActiva;
-        if (!coincideCategoria) return false;
+      try {
+        const textoBusqueda = inputBuscar ? inputBuscar.value.trim() : '';
+        let lista = [];
 
-        // Filtro de búsqueda: por nombre de emprendimiento, categoría o producto
-        if (textoBusqueda === '') return true;
+        if (EH.client && EH.client.businesses) {
+          lista = await EH.client.businesses.getAllPublished({
+            categoryId: categoriaActivaId,
+            search: textoBusqueda
+          });
+        }
 
-        const coincideNombreEmp = emp.nombre.toLowerCase().includes(textoBusqueda);
-        const coincideCategoriaEmp = emp.categoria.toLowerCase().includes(textoBusqueda);
-        const productosDelEmp = productos.filter(p => p.emprendimientoId === emp.id);
-        const coincideProducto = productosDelEmp.some(p => p.nombre.toLowerCase().includes(textoBusqueda));
+        if (!lista || lista.length === 0) {
+          contenedorEmprendimientos.innerHTML = `
+            <div class="estado-vacio">
+              <div class="estado-vacio__icono">🔍</div>
+              <p>No encontramos emprendimientos con los criterios seleccionados.</p>
+            </div>`;
+          return;
+        }
 
-        return coincideNombreEmp || coincideCategoriaEmp || coincideProducto;
-      });
+        // Obtener favoritos del usuario si tiene sesión iniciada
+        let favoritosUsuario = [];
+        if (sesion && EH.client && EH.client.favorites) {
+          try {
+            const favs = await EH.client.favorites.listByUser(sesion.id || sesion.correo);
+            favoritosUsuario = favs.map(f => f.id);
+          } catch (e) {
+            console.warn('Error cargando favoritos:', e);
+          }
+        }
 
-      if (resultado.length === 0) {
+        contenedorEmprendimientos.innerHTML = lista.map(emp => {
+          const esFav = favoritosUsuario.includes(emp.id);
+          const nombreCat = (emp.category && emp.category.name) ? emp.category.name : (emp.categoria || 'Emprendimiento');
+          const iconoCat = (emp.category && emp.category.icon) ? emp.category.icon : '🏪';
+          const imagenHtml = emp.logo_url
+            ? `<img src="${EH.escapeHtml(emp.logo_url)}" alt="${EH.escapeHtml(emp.name)}" class="tarjeta-emprendimiento__foto" loading="lazy">`
+            : `<div class="tarjeta-emprendimiento__imagen" aria-hidden="true">${iconoCat}</div>`;
+
+          return `
+            <article class="card tarjeta-emprendimiento">
+              ${imagenHtml}
+              <button class="tarjeta-emprendimiento__favorito ${esFav ? 'tarjeta-emprendimiento__favorito--activo' : ''}"
+                      data-id="${EH.escapeHtml(emp.id)}" 
+                      title="${esFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}"
+                      aria-label="Favorito para ${EH.escapeHtml(emp.name)}">
+                ${esFav ? '❤️' : '🤍'}
+              </button>
+              <div class="tarjeta-emprendimiento__info">
+                <span class="chip-categoria">${EH.escapeHtml(nombreCat)}</span>
+                <h3>${EH.escapeHtml(emp.name)}</h3>
+                <p>${EH.escapeHtml(emp.description)}</p>
+                <a href="emprendimiento.html?id=${encodeURIComponent(emp.id)}" class="btn btn-primario btn-bloque">
+                  Ver emprendimiento
+                </a>
+              </div>
+            </article>
+          `;
+        }).join('');
+
+        // Eventos en botones de favoritos
+        contenedorEmprendimientos.querySelectorAll('.tarjeta-emprendimiento__favorito').forEach(btn => {
+          btn.addEventListener('click', async function (e) {
+            e.preventDefault();
+            if (!sesion) {
+              EH.toast('Inicia sesión para guardar en favoritos ❤️');
+              return;
+            }
+
+            const id = btn.dataset.id;
+            try {
+              const ahoraEsFav = await EH.client.favorites.toggle(sesion.id || sesion.correo, id);
+              btn.classList.toggle('tarjeta-emprendimiento__favorito--activo', ahoraEsFav);
+              btn.textContent = ahoraEsFav ? '❤️' : '🤍';
+              EH.toast(ahoraEsFav ? '❤️ Agregado a tus favoritos' : 'Quitado de tus favoritos');
+            } catch (err) {
+              console.error(err);
+              EH.toast('No se pudo actualizar favoritos.');
+            }
+          });
+        });
+
+      } catch (err) {
+        console.error('Error al cargar emprendimientos:', err);
         contenedorEmprendimientos.innerHTML = `
           <div class="estado-vacio">
-            <div class="estado-vacio__icono">🔍</div>
-            <p>No encontramos resultados para tu búsqueda.</p>
+            <p>Ocurrió un inconveniente al cargar el catálogo.</p>
           </div>`;
+      }
+    }
+
+    // Buscador con debounce
+    let temporizadorBusqueda;
+    if (inputBuscar) {
+      inputBuscar.addEventListener('input', () => {
+        clearTimeout(temporizadorBusqueda);
+        temporizadorBusqueda = setTimeout(cargarEmprendimientos, 300);
+      });
+    }
+
+    await cargarCategorias();
+    await cargarEmprendimientos();
+  }
+
+  /* ==========================================================================
+     B) DETALLE PÚBLICO DEL EMPRENDIMIENTO (pages/emprendimiento.html)
+     ========================================================================== */
+  const contenedorDetalle = document.getElementById('detalleEmprendimiento');
+
+  if (contenedorDetalle) {
+    const sesion = EH.sesion.obtener();
+    const parametros = new URLSearchParams(window.location.search);
+    const id = parametros.get('id');
+
+    if (!id) {
+      contenedorDetalle.innerHTML = `
+        <div class="estado-vacio">
+          <p>Emprendimiento no especificado. <a href="inicio.html">Volver al catálogo</a></p>
+        </div>`;
+      return;
+    }
+
+    let emprendimiento = null;
+    let productos = [];
+
+    async function cargarDetalle() {
+      try {
+        emprendimiento = await EH.client.businesses.getById(id);
+        if (!emprendimiento) throw new Error('No encontrado');
+
+        productos = await EH.client.products.getByBusiness(id, { onlyActive: true });
+        pintarEncabezado();
+        pintarProductos();
+      } catch (err) {
+        console.error('Error cargando detalle:', err);
+        contenedorDetalle.innerHTML = `
+          <div class="estado-vacio">
+            <p>Este emprendimiento no está disponible o no existe.</p>
+            <a href="inicio.html" class="btn btn-primario" style="margin-top:16px;">Volver a emprendimientos</a>
+          </div>`;
+      }
+    }
+
+    async function pintarEncabezado() {
+      const nombreCat = (emprendimiento.category && emprendimiento.category.name) ? emprendimiento.category.name : (emprendimiento.categoria || 'General');
+
+      document.getElementById('empNombre').textContent = emprendimiento.name;
+      document.getElementById('empDescripcion').textContent = emprendimiento.description;
+      document.getElementById('empCategoria').textContent = nombreCat;
+      document.getElementById('empHorario').textContent = emprendimiento.operating_hours || 'Lunes a Sábado, horario habitual';
+
+      const medios = Array.isArray(emprendimiento.payment_methods)
+        ? emprendimiento.payment_methods.join(', ')
+        : (emprendimiento.mediosPago ? emprendimiento.mediosPago.join(', ') : 'Yape, Plin, Efectivo');
+      document.getElementById('empMediosPago').textContent = medios;
+
+      // Promociones
+      const contPromos = document.getElementById('empPromociones');
+      if (contPromos) {
+        const promos = emprendimiento.promotions || [];
+        if (promos.length > 0) {
+          contPromos.innerHTML = promos.map(p => `<li>🏷️ ${EH.escapeHtml(p.title || p)}</li>`).join('');
+        } else {
+          contPromos.innerHTML = '<li style="color:#777;">No hay promociones activas por el momento.</li>';
+        }
+      }
+
+      // Botón favorito de detalle
+      const btnFav = document.getElementById('btnFavoritoDetalle');
+      if (btnFav) {
+        let esFav = false;
+        if (sesion && EH.client && EH.client.favorites) {
+          esFav = await EH.client.favorites.isFavorite(sesion.id || sesion.correo, emprendimiento.id);
+        }
+
+        btnFav.textContent = esFav ? '❤️ En tus favoritos' : '🤍 Agregar a favoritos';
+        btnFav.classList.toggle('btn-secundario', esFav);
+        btnFav.classList.toggle('btn-primario', !esFav);
+
+        btnFav.onclick = async () => {
+          if (!sesion) {
+            EH.toast('Inicia sesión para guardar este negocio en favoritos ❤️');
+            return;
+          }
+          const ahoraEsFav = await EH.client.favorites.toggle(sesion.id || sesion.correo, emprendimiento.id);
+          btnFav.textContent = ahoraEsFav ? '❤️ En tus favoritos' : '🤍 Agregar a favoritos';
+          btnFav.classList.toggle('btn-secundario', ahoraEsFav);
+          btnFav.classList.toggle('btn-primario', !ahoraEsFav);
+          EH.toast(ahoraEsFav ? '❤️ Emprendimiento agregado a tus favoritos' : 'Quitado de favoritos');
+        };
+      }
+    }
+
+    function pintarProductos() {
+      const cont = document.getElementById('listaProductosEmprendimiento');
+      if (!cont) return;
+
+      if (productos.length === 0) {
+        cont.innerHTML = '<div class="estado-vacio"><p>Este emprendimiento todavía no tiene productos disponibles en este momento.</p></div>';
         return;
       }
 
-      contenedorEmprendimientos.innerHTML = resultado.map(emp => {
-        const esFav = EH.favoritos.esFavorito(sesion.correo, emp.id);
+      cont.innerHTML = productos.map(p => {
+        const tieneStock = Number(p.stock) > 0;
+        const precio = Number(p.price || p.precio).toFixed(2);
+        const imagenHtml = p.main_image_url || p.imagen
+          ? `<img src="${EH.escapeHtml(p.main_image_url || p.imagen)}" alt="${EH.escapeHtml(p.name || p.nombre)}" class="tarjeta-producto__foto" loading="lazy">`
+          : `<div class="tarjeta-producto__imagen" aria-hidden="true">📦</div>`;
+
         return `
-          <article class="card tarjeta-emprendimiento">
-            <div class="tarjeta-emprendimiento__imagen">🏪</div>
-            <button class="tarjeta-emprendimiento__favorito ${esFav ? 'tarjeta-emprendimiento__favorito--activo' : ''}"
-                    data-id="${emp.id}" title="Favorito">${esFav ? '❤️' : '🤍'}</button>
-            <div class="tarjeta-emprendimiento__info">
-              <span class="chip-categoria">${emp.categoria}</span>
-              <h3>${emp.nombre}</h3>
-              <p>${emp.descripcion}</p>
-              <a href="emprendimiento.html?id=${emp.id}" class="btn btn-primario btn-bloque">Ver emprendimiento</a>
+          <article class="card tarjeta-producto ${!tieneStock ? 'tarjeta-producto--agotado' : ''}">
+            ${imagenHtml}
+            <div class="tarjeta-producto__info">
+              <h4>${EH.escapeHtml(p.name || p.nombre)}</h4>
+              <p>${EH.escapeHtml(p.description || p.descripcion || '')}</p>
+              <div class="tarjeta-producto__precio">S/ ${precio}</div>
+              <div class="tarjeta-producto__stock ${tieneStock ? '' : 'tarjeta-producto__stock--cero'}">
+                ${tieneStock ? `Stock: ${p.stock}` : '⚠️ Agotado'}
+              </div>
+              <button class="btn btn-primario btn-bloque" data-id="${EH.escapeHtml(p.id)}" ${!tieneStock ? 'disabled' : ''}>
+                ${tieneStock ? 'Agregar al carrito' : 'Sin stock'}
+              </button>
             </div>
           </article>
         `;
       }).join('');
 
-      // Botones de favorito de cada tarjeta
-      contenedorEmprendimientos.querySelectorAll('.tarjeta-emprendimiento__favorito').forEach(btn => {
-        btn.addEventListener('click', function () {
-          const id = btn.dataset.id;
-          const esFavAhora = EH.favoritos.alternar(sesion.correo, id);
-          EH.toast(esFavAhora ? '❤️ Agregado a favoritos' : 'Quitado de favoritos');
-          pintarEmprendimientos();
-        });
-      });
-    }
-
-    inputBuscar.addEventListener('input', pintarEmprendimientos);
-
-    pintarCategorias();
-    pintarEmprendimientos();
-  }
-
-  /* ==========================================================================
-     B) DETALLE DE UN EMPRENDIMIENTO (pages/emprendimiento.html)
-     ========================================================================== */
-  const contenedorDetalle = document.getElementById('detalleEmprendimiento');
-
-  if (contenedorDetalle) {
-    if (!EH.protegerPagina('cliente', 'registro.html')) return;
-
-    const sesion = EH.sesion.obtener();
-
-    // Leemos el "id" del emprendimiento desde la URL: emprendimiento.html?id=xxx
-    const parametros = new URLSearchParams(window.location.search);
-    const id = parametros.get('id');
-
-    const emprendimientos = EH.storage.obtener('eh_emprendimientos', []);
-    const emprendimiento = emprendimientos.find(e => e.id === id);
-
-    if (!emprendimiento) {
-      contenedorDetalle.innerHTML = '<p>Este emprendimiento ya no está disponible.</p>';
-      return;
-    }
-
-    const productos = EH.storage.obtener('eh_productos', [])
-      .filter(p => p.emprendimientoId === id);
-
-    // --- Encabezado del emprendimiento ---
-    function pintarEncabezado() {
-      const esFav = EH.favoritos.esFavorito(sesion.correo, emprendimiento.id);
-      document.getElementById('empNombre').textContent = emprendimiento.nombre;
-      document.getElementById('empDescripcion').textContent = emprendimiento.descripcion;
-      document.getElementById('empCategoria').textContent = emprendimiento.categoria;
-      document.getElementById('empHorario').textContent = emprendimiento.horario || 'No especificado';
-      document.getElementById('empMediosPago').textContent = emprendimiento.mediosPago.join(', ');
-
-      const contPromos = document.getElementById('empPromociones');
-      if (emprendimiento.promociones && emprendimiento.promociones.length > 0) {
-        contPromos.innerHTML = emprendimiento.promociones.map(p => `<li>🏷️ ${p}</li>`).join('');
-      } else {
-        contPromos.innerHTML = '<li>Este emprendimiento no tiene promociones activas.</li>';
-      }
-
-      const btnFav = document.getElementById('btnFavoritoDetalle');
-      btnFav.textContent = esFav ? '❤️ En tus favoritos' : '🤍 Agregar a favoritos';
-      btnFav.classList.toggle('btn-secundario', esFav);
-      btnFav.classList.toggle('btn-primario', !esFav);
-    }
-
-    document.getElementById('btnFavoritoDetalle').addEventListener('click', function () {
-      const esFavAhora = EH.favoritos.alternar(sesion.correo, emprendimiento.id);
-      EH.toast(esFavAhora ? '❤️ Agregado a favoritos' : 'Quitado de favoritos');
-      pintarEncabezado();
-    });
-
-    // --- Listado de productos del emprendimiento ---
-    function pintarProductos() {
-      const cont = document.getElementById('listaProductosEmprendimiento');
-
-      if (productos.length === 0) {
-        cont.innerHTML = '<div class="estado-vacio"><p>Este emprendimiento todavía no publicó productos.</p></div>';
-        return;
-      }
-
-      cont.innerHTML = productos.map(p => `
-        <article class="card tarjeta-producto">
-          <div class="tarjeta-producto__imagen">${categoriaAIcono(p.categoria)}</div>
-          <div class="tarjeta-producto__info">
-            <h4>${p.nombre}</h4>
-            <p>${p.descripcion}</p>
-            <div class="tarjeta-producto__precio">S/ ${p.precio.toFixed(2)}</div>
-            <div class="tarjeta-producto__stock">${p.stock > 0 ? `Stock: ${p.stock}` : 'Agotado'}</div>
-            <button class="btn btn-primario btn-bloque" data-id="${p.id}" ${p.stock === 0 ? 'disabled' : ''}>
-              Agregar al carrito
-            </button>
-          </div>
-        </article>
-      `).join('');
-
+      // Evento de agregar al carrito
       cont.querySelectorAll('button[data-id]').forEach(btn => {
-        btn.addEventListener('click', function () {
-          const resultado = EH.carrito.agregar(sesion.correo, btn.dataset.id, 1);
-          if (resultado.ok) {
+        btn.addEventListener('click', async function () {
+          if (!sesion) {
+            // Permitir guardar temporal o solicitar login
+            EH.toast('Inicia sesión para completar tu pedido 🛒');
+            setTimeout(() => {
+              window.location.href = 'registro.html';
+            }, 1000);
+            return;
+          }
+
+          const prodId = btn.dataset.id;
+          btn.disabled = true;
+          try {
+            await EH.client.cart.addItem(sesion.id || sesion.correo, prodId, 1);
             EH.toast('🛒 Producto agregado al carrito');
             EH.actualizarBadgeCarrito();
-          } else {
-            EH.toast(resultado.mensaje);
+          } catch (err) {
+            console.error(err);
+            EH.toast(err.message || 'No se pudo agregar al carrito');
+          } finally {
+            btn.disabled = false;
           }
         });
       });
     }
 
-    function categoriaAIcono(nombreCategoria) {
-      const cat = EH_CATEGORIAS.find(c => c.nombre === nombreCategoria);
-      return cat ? cat.icono : '📦';
-    }
-
-    pintarEncabezado();
-    pintarProductos();
+    await cargarDetalle();
   }
 
 });

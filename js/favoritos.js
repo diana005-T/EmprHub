@@ -1,99 +1,95 @@
 /* ==========================================================================
    EmpreHub - favoritos.js
-   Maneja los emprendimientos marcados como favoritos por cada cliente.
-   Se guardan en localStorage bajo la clave "eh_favoritos" como un array de:
-     { correo: 'cliente@correo.com', emprendimientoId: 'demo-lupe' }
+   Manejo de Favoritos del Cliente.
+   Integrado con Supabase PostgreSQL y RLS.
    ========================================================================== */
 
-EH.favoritos = {
-
-  // Devuelve TODOS los favoritos guardados (de todos los clientes).
-  _todos() {
-    return EH.storage.obtener('eh_favoritos', []);
-  },
-
-  // Devuelve solo los IDs de emprendimientos favoritos de un cliente.
-  deCliente(correo) {
-    return EH.favoritos._todos()
-      .filter(f => f.correo === correo)
-      .map(f => f.emprendimientoId);
-  },
-
-  // ¿Este emprendimiento ya es favorito de este cliente?
-  esFavorito(correo, emprendimientoId) {
-    return EH.favoritos._todos().some(
-      f => f.correo === correo && f.emprendimientoId === emprendimientoId
-    );
-  },
-
-  // Agrega o quita de favoritos (según el estado actual) y devuelve el nuevo estado.
-  alternar(correo, emprendimientoId) {
-    let favoritos = EH.favoritos._todos();
-    const yaEsFavorito = favoritos.some(
-      f => f.correo === correo && f.emprendimientoId === emprendimientoId
-    );
-
-    if (yaEsFavorito) {
-      favoritos = favoritos.filter(
-        f => !(f.correo === correo && f.emprendimientoId === emprendimientoId)
-      );
-    } else {
-      favoritos.push({ correo, emprendimientoId });
-    }
-
-    EH.storage.guardar('eh_favoritos', favoritos);
-    return !yaEsFavorito;
-  }
-};
-
-/* --------------------------------------------------------------------------
-   PANTALLA "MIS FAVORITOS" (pages/favoritos.html)
-   Solo se ejecuta si la página tiene el contenedor #listaFavoritos.
-   -------------------------------------------------------------------------- */
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
   const contenedor = document.getElementById('listaFavoritos');
   if (!contenedor) return;
 
-  if (!EH.protegerPagina('cliente', 'registro.html')) return;
+  // Proteger página: exige sesión activa de cliente
+  const tieneAcceso = await EH.protegerPagina('customer', 'registro.html');
+  if (!tieneAcceso) return;
 
   const sesion = EH.sesion.obtener();
 
-  function pintarFavoritos() {
-    const idsFavoritos = EH.favoritos.deCliente(sesion.correo);
-    const emprendimientos = EH.storage.obtener('eh_emprendimientos', [])
-      .filter(emp => idsFavoritos.includes(emp.id));
+  async function pintarFavoritos() {
+    contenedor.innerHTML = `
+      <div class="estado-cargando">
+        <div class="spinner"></div>
+        <p>Cargando tus favoritos...</p>
+      </div>`;
 
-    if (emprendimientos.length === 0) {
+    try {
+      let emprendimientos = [];
+      if (EH.client && EH.client.favorites) {
+        emprendimientos = await EH.client.favorites.listByUser(sesion.id || sesion.correo);
+      }
+
+      if (!emprendimientos || emprendimientos.length === 0) {
+        contenedor.innerHTML = `
+          <div class="estado-vacio">
+            <div class="estado-vacio__icono">🤍</div>
+            <p>Todavía no tienes emprendimientos guardados en tus favoritos.</p>
+            <a href="inicio.html" class="btn btn-primario" style="margin-top: 16px;">Explorar emprendimientos</a>
+          </div>`;
+        return;
+      }
+
+      contenedor.innerHTML = emprendimientos.map(emp => {
+        const nombreCat = (emp.category && emp.category.name) ? emp.category.name : (emp.categoria || 'Emprendimiento');
+        const iconoCat = (emp.category && emp.category.icon) ? emp.category.icon : '🏪';
+        const imagenHtml = emp.logo_url
+          ? `<img src="${EH.escapeHtml(emp.logo_url)}" alt="${EH.escapeHtml(emp.name)}" class="tarjeta-emprendimiento__foto" loading="lazy">`
+          : `<div class="tarjeta-emprendimiento__imagen" aria-hidden="true">${iconoCat}</div>`;
+
+        return `
+          <article class="card tarjeta-emprendimiento">
+            ${imagenHtml}
+            <button class="tarjeta-emprendimiento__favorito tarjeta-emprendimiento__favorito--activo"
+                    data-id="${EH.escapeHtml(emp.id)}" 
+                    title="Quitar de favoritos"
+                    aria-label="Quitar de favoritos a ${EH.escapeHtml(emp.name)}">
+              ❤️
+            </button>
+            <div class="tarjeta-emprendimiento__info">
+              <span class="chip-categoria">${EH.escapeHtml(nombreCat)}</span>
+              <h3>${EH.escapeHtml(emp.name)}</h3>
+              <p>${EH.escapeHtml(emp.description)}</p>
+              <a href="emprendimiento.html?id=${encodeURIComponent(emp.id)}" class="btn btn-primario btn-bloque">
+                Ver emprendimiento
+              </a>
+            </div>
+          </article>
+        `;
+      }).join('');
+
+      // Eventos para quitar de favoritos
+      contenedor.querySelectorAll('.tarjeta-emprendimiento__favorito').forEach(btn => {
+        btn.addEventListener('click', async function () {
+          const empId = btn.dataset.id;
+          btn.disabled = true;
+          try {
+            await EH.client.favorites.toggle(sesion.id || sesion.correo, empId);
+            EH.toast('Quitado de tus favoritos');
+            await pintarFavoritos();
+          } catch (e) {
+            console.error(e);
+            EH.toast('No se pudo quitar de favoritos.');
+            btn.disabled = false;
+          }
+        });
+      });
+
+    } catch (err) {
+      console.error('Error cargando favoritos:', err);
       contenedor.innerHTML = `
         <div class="estado-vacio">
-          <div class="estado-vacio__icono">🤍</div>
-          <p>Todavía no tienes emprendimientos favoritos.</p>
+          <p>Ocurrió un error al cargar tus favoritos.</p>
         </div>`;
-      return;
     }
-
-    contenedor.innerHTML = emprendimientos.map(emp => `
-      <article class="card tarjeta-emprendimiento">
-        <div class="tarjeta-emprendimiento__imagen">🏪</div>
-        <button class="tarjeta-emprendimiento__favorito tarjeta-emprendimiento__favorito--activo"
-                data-id="${emp.id}" title="Quitar de favoritos">❤️</button>
-        <div class="tarjeta-emprendimiento__info">
-          <span class="chip-categoria">${emp.categoria}</span>
-          <h3>${emp.nombre}</h3>
-          <p>${emp.descripcion}</p>
-          <a href="emprendimiento.html?id=${emp.id}" class="btn btn-primario btn-bloque">Ver emprendimiento</a>
-        </div>
-      </article>
-    `).join('');
-
-    contenedor.querySelectorAll('.tarjeta-emprendimiento__favorito').forEach(btn => {
-      btn.addEventListener('click', function () {
-        EH.favoritos.alternar(sesion.correo, btn.dataset.id);
-        EH.toast('Quitado de favoritos');
-        pintarFavoritos();
-      });
-    });
   }
 
-  pintarFavoritos();
+  await pintarFavoritos();
 });

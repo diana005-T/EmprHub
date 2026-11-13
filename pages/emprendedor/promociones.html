@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EmpreHub - Mis Promociones</title>
+
+  <!-- Google Font: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="../../css/login.css">
+  <link rel="stylesheet" href="../../css/emprendedor.css">
+</head>
+<body data-pagina-emprendedor="true">
+
+  <header class="header">
+    <div class="header__contenido contenedor">
+      <a href="panel.html" class="header__logo" aria-label="Panel principal">
+        <img src="../../img/logo.png" alt="EmpreHub" height="42">
+      </a>
+      <button class="header__hamburguesa" aria-label="Abrir menú" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="header__nav" aria-label="Navegación emprendedor">
+        <a href="../inicio.html">Ver catálogo</a>
+        <a href="../perfil.html">Mi Perfil</a>
+        <button data-accion="cerrar-sesion" data-destino="../../index.html" class="btn btn-alerta" style="padding:6px 14px; font-size:0.9rem;">Cerrar sesión</button>
+      </nav>
+    </div>
+  </header>
+
+  <div class="panel contenedor" style="margin-top:var(--espacio-lg);">
+    <aside class="panel__menu" aria-label="Menú del panel">
+      <a href="panel.html">🏠 Panel</a>
+      <a href="mi-emprendimiento.html">🏪 Mi emprendimiento</a>
+      <a href="productos.html">📦 Mis productos</a>
+      <a href="pedidos.html">🧾 Pedidos</a>
+      <a href="promociones.html" class="activo" aria-current="page">🎯 Promociones</a>
+    </aside>
+
+    <section class="panel__contenido">
+
+      <div id="avisoCrearEmprendimiento" class="mensaje mensaje-error oculto" style="margin-bottom: var(--espacio-lg);">
+        Antes de crear promociones, primero debes registrar tu emprendimiento.
+        <a href="mi-emprendimiento.html" style="font-weight:700; text-decoration:underline;">Crear ahora →</a>
+      </div>
+
+      <div id="seccionPromociones">
+        <!-- Formulario para nueva promoción -->
+        <div class="tarjeta-formulario" style="margin:0 0 var(--espacio-lg);">
+          <h2>Agregar Promoción</h2>
+          <p style="font-size:0.85rem; color:#666; margin-bottom:var(--espacio-md);">
+            Plan gratuito: Máximo <strong>2 promociones activas</strong> al mismo tiempo.
+            Las promociones son texto breve que se muestra en la página de tu negocio.
+          </p>
+
+          <form id="formPromocion" novalidate>
+            <div class="campo">
+              <label for="promoTituloInput">Título de la promoción</label>
+              <input type="text" id="promoTituloInput"
+                     placeholder="Ej. 20% de descuento en combos de fin de semana"
+                     maxlength="120" required>
+              <span class="error-campo" id="errorPromoTitulo"></span>
+            </div>
+
+            <div class="campo">
+              <label for="promoDescInput">Descripción breve (opcional)</label>
+              <input type="text" id="promoDescInput"
+                     placeholder="Ej. Válido sábados y domingos de 12pm a 8pm"
+                     maxlength="200">
+            </div>
+
+            <div class="campo">
+              <label for="promoDescuentoInput">Porcentaje de descuento (opcional)</label>
+              <input type="number" id="promoDescuentoInput"
+                     step="1" min="1" max="99"
+                     placeholder="Ej. 20  (si aplica)">
+              <span class="error-campo" id="errorPromoDescuento"></span>
+            </div>
+
+            <div class="campo">
+              <label for="promoFechaFinInput">Fecha de vencimiento (opcional)</label>
+              <input type="date" id="promoFechaFinInput">
+            </div>
+
+            <div class="carrito__acciones">
+              <button type="button" id="btnCancelarPromo" class="btn btn-secundario">Cancelar</button>
+              <button type="submit" id="btnGuardarPromo" class="btn btn-primario">Publicar promoción</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Contador de promociones activas -->
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--espacio-md);">
+          <h2 class="inicio__seccion-titulo" style="margin:0;">Mis Promociones Activas</h2>
+          <span id="contadorPromos" style="font-size:0.9rem; color:var(--color-gris-medio);">0 / 2</span>
+        </div>
+
+        <!-- Lista de promociones existentes -->
+        <div id="listaPromociones" aria-live="polite">
+          <div class="estado-vacio">
+            <div class="estado-vacio__icono">🎯</div>
+            <p>Todavía no tienes promociones activas.<br>¡Crea una para atraer más clientes!</p>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </div>
+
+  <div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+  <!-- SDK Supabase y Módulos -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../../js/supabase-config.js"></script>
+  <script src="../../js/supabase-client.js"></script>
+  <script src="../../js/app.js"></script>
+  <script src="../../js/emprendedor.js"></script>
+  <script src="../../js/promociones.js"></script>
+</body>
+</html>
+

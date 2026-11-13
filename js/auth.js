@@ -1,229 +1,269 @@
 /* ==========================================================================
    EmpreHub - auth.js
-   Lógica de la pantalla de REGISTRO e INICIO DE SESIÓN.
-   Usa EH.storage y EH.sesion definidos en app.js.
+   Lógica segura de REGISTRO, INICIO DE SESIÓN y RECUPERACIÓN DE CONTRASEÑA.
+   Integrado con Supabase Auth y perfiles públicos.
    ========================================================================== */
 
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
 
   /* ------------------------------------------------------------------------
-     0) Si ya hay una sesión activa, no tiene sentido ver el login de nuevo:
-     mandamos directo a la pantalla que le corresponde.
+     0) Comprobar sesión activa y redirigir
      ------------------------------------------------------------------------ */
   const sesionActiva = EH.sesion.obtener();
   if (sesionActiva) {
-    window.location.href = sesionActiva.tipo === 'emprendedor'
-      ? 'emprendedor/panel.html'
-      : 'inicio.html';
-    return;
+    if (sesionActiva.tipo === 'admin') {
+      window.location.href = 'admin/panel.html';
+      return;
+    } else if (sesionActiva.tipo === 'emprendedor' || sesionActiva.tipo === 'entrepreneur') {
+      window.location.href = 'emprendedor/panel.html';
+      return;
+    } else {
+      window.location.href = 'inicio.html';
+      return;
+    }
   }
 
   /* ------------------------------------------------------------------------
-     1) CAMBIO DE PESTAÑAS: Iniciar sesión <-> Crear cuenta
+     1) Pestañas: Iniciar sesión <-> Crear cuenta
      ------------------------------------------------------------------------ */
   const pestanaLogin = document.getElementById('pestanaLogin');
   const pestanaRegistro = document.getElementById('pestanaRegistro');
   const formLogin = document.getElementById('formLogin');
   const formRegistro = document.getElementById('formRegistro');
 
-  pestanaLogin.addEventListener('click', function () {
-    pestanaLogin.classList.add('auth__pestana--activa');
-    pestanaRegistro.classList.remove('auth__pestana--activa');
-    formLogin.classList.remove('oculto');
-    formRegistro.classList.add('oculto');
-  });
+  if (pestanaLogin && pestanaRegistro) {
+    pestanaLogin.addEventListener('click', function () {
+      pestanaLogin.classList.add('auth__pestana--activa');
+      pestanaRegistro.classList.remove('auth__pestana--activa');
+      formLogin.classList.remove('oculto');
+      formRegistro.classList.add('oculto');
+    });
 
-  pestanaRegistro.addEventListener('click', function () {
-    pestanaRegistro.classList.add('auth__pestana--activa');
-    pestanaLogin.classList.remove('auth__pestana--activa');
-    formRegistro.classList.remove('oculto');
-    formLogin.classList.add('oculto');
-  });
+    pestanaRegistro.addEventListener('click', function () {
+      pestanaRegistro.classList.add('auth__pestana--activa');
+      pestanaLogin.classList.remove('auth__pestana--activa');
+      formRegistro.classList.remove('oculto');
+      formLogin.classList.add('oculto');
+    });
+  }
 
   /* ------------------------------------------------------------------------
-     2) SELECCIÓN DE TIPO DE USUARIO (paso 1 del registro)
+     2) Tipo de usuario en el registro (Cliente o Emprendedor)
      ------------------------------------------------------------------------ */
   const tipoCliente = document.getElementById('tipoCliente');
   const tipoEmprendedor = document.getElementById('tipoEmprendedor');
   const registroTipo = document.getElementById('registroTipo');
 
-  tipoCliente.addEventListener('click', function () {
-    tipoCliente.classList.add('auth__tipo--activo');
-    tipoEmprendedor.classList.remove('auth__tipo--activo');
-    registroTipo.value = 'cliente';
-  });
+  if (tipoCliente && tipoEmprendedor && registroTipo) {
+    tipoCliente.addEventListener('click', function () {
+      tipoCliente.classList.add('auth__tipo--activo');
+      tipoEmprendedor.classList.remove('auth__tipo--activo');
+      registroTipo.value = 'cliente';
+    });
 
-  tipoEmprendedor.addEventListener('click', function () {
-    tipoEmprendedor.classList.add('auth__tipo--activo');
-    tipoCliente.classList.remove('auth__tipo--activo');
-    registroTipo.value = 'emprendedor';
-  });
+    tipoEmprendedor.addEventListener('click', function () {
+      tipoEmprendedor.classList.add('auth__tipo--activo');
+      tipoCliente.classList.remove('auth__tipo--activo');
+      registroTipo.value = 'emprendedor';
+    });
+  }
 
   /* ------------------------------------------------------------------------
-     3) FUNCIONES DE VALIDACIÓN REUTILIZABLES
+     3) Funciones de validación
      ------------------------------------------------------------------------ */
-
-  // Valida el formato general de un correo electrónico.
   function correoValido(correo) {
     const patron = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return patron.test(correo);
   }
 
-  // La contraseña debe tener mínimo 8 caracteres, con al menos una letra y un número.
   function passwordValida(password) {
     const tieneLetra = /[A-Za-z]/.test(password);
     const tieneNumero = /[0-9]/.test(password);
     return password.length >= 8 && tieneLetra && tieneNumero;
   }
 
-  // Muestra un mensaje de error debajo de un campo específico.
   function mostrarError(idSpan, mensaje) {
-    document.getElementById(idSpan).textContent = mensaje;
+    const el = document.getElementById(idSpan);
+    if (el) el.textContent = mensaje;
   }
 
-  // Limpia todos los mensajes de error de un formulario.
   function limpiarErrores(ids) {
     ids.forEach(id => mostrarError(id, ''));
   }
 
   /* ------------------------------------------------------------------------
-     4) ENVÍO DEL FORMULARIO DE REGISTRO
+     4) Envío del formulario de Registro
      ------------------------------------------------------------------------ */
-  formRegistro.addEventListener('submit', function (e) {
-    e.preventDefault();
+  if (formRegistro) {
+    formRegistro.addEventListener('submit', async function (e) {
+      e.preventDefault();
 
-    const nombre = document.getElementById('registroNombre').value.trim();
-    const correo = document.getElementById('registroCorreo').value.trim().toLowerCase();
-    const password = document.getElementById('registroPassword').value;
-    const confirmar = document.getElementById('registroConfirmar').value;
-    const tipo = registroTipo.value;
+      const btnSubmit = formRegistro.querySelector('button[type="submit"]');
+      const nombre = document.getElementById('registroNombre').value.trim();
+      const correo = document.getElementById('registroCorreo').value.trim().toLowerCase();
+      const password = document.getElementById('registroPassword').value;
+      const confirmar = document.getElementById('registroConfirmar').value;
+      const tipo = registroTipo ? registroTipo.value : 'cliente';
 
-    const idsError = ['errorRegistroNombre', 'errorRegistroCorreo', 'errorRegistroPassword', 'errorRegistroConfirmar'];
-    limpiarErrores(idsError);
-    document.getElementById('mensajeRegistro').innerHTML = '';
+      const idsError = ['errorRegistroNombre', 'errorRegistroCorreo', 'errorRegistroPassword', 'errorRegistroConfirmar'];
+      limpiarErrores(idsError);
+      const contenedorMensaje = document.getElementById('mensajeRegistro');
+      if (contenedorMensaje) contenedorMensaje.innerHTML = '';
 
-    let esValido = true;
+      let esValido = true;
 
-    // Validación: nombre obligatorio y con mínimo 3 caracteres.
-    if (nombre === '') {
-      mostrarError('errorRegistroNombre', 'El nombre es obligatorio.');
-      esValido = false;
-    } else if (nombre.length < 3) {
-      mostrarError('errorRegistroNombre', 'El nombre debe tener mínimo 3 caracteres.');
-      esValido = false;
-    }
+      if (nombre === '') {
+        mostrarError('errorRegistroNombre', 'El nombre es obligatorio.');
+        esValido = false;
+      } else if (nombre.length < 3) {
+        mostrarError('errorRegistroNombre', 'El nombre debe tener mínimo 3 caracteres.');
+        esValido = false;
+      }
 
-    // Validación: correo obligatorio y con formato válido.
-    if (correo === '') {
-      mostrarError('errorRegistroCorreo', 'El correo es obligatorio.');
-      esValido = false;
-    } else if (!correoValido(correo)) {
-      mostrarError('errorRegistroCorreo', 'El correo electrónico no es válido.');
-      esValido = false;
-    }
+      if (correo === '') {
+        mostrarError('errorRegistroCorreo', 'El correo es obligatorio.');
+        esValido = false;
+      } else if (!correoValido(correo)) {
+        mostrarError('errorRegistroCorreo', 'El correo electrónico no es válido.');
+        esValido = false;
+      }
 
-    // Validación: contraseña obligatoria, mínimo 8 caracteres, letra + número.
-    if (password === '') {
-      mostrarError('errorRegistroPassword', 'La contraseña es obligatoria.');
-      esValido = false;
-    } else if (!passwordValida(password)) {
-      mostrarError('errorRegistroPassword', 'La contraseña debe tener al menos 8 caracteres, con una letra y un número.');
-      esValido = false;
-    }
+      if (password === '') {
+        mostrarError('errorRegistroPassword', 'La contraseña es obligatoria.');
+        esValido = false;
+      } else if (!passwordValida(password)) {
+        mostrarError('errorRegistroPassword', 'La contraseña debe tener al menos 8 caracteres, con una letra y un número.');
+        esValido = false;
+      }
 
-    // Validación: confirmación obligatoria y debe coincidir.
-    if (confirmar === '') {
-      mostrarError('errorRegistroConfirmar', 'Debes confirmar la contraseña.');
-      esValido = false;
-    } else if (confirmar !== password) {
-      mostrarError('errorRegistroConfirmar', 'Las contraseñas no coinciden.');
-      esValido = false;
-    }
+      if (confirmar === '') {
+        mostrarError('errorRegistroConfirmar', 'Debes confirmar la contraseña.');
+        esValido = false;
+      } else if (confirmar !== password) {
+        mostrarError('errorRegistroConfirmar', 'Las contraseñas no coinciden.');
+        esValido = false;
+      }
 
-    if (!esValido) return;
+      if (!esValido) return;
 
-    // Validación: el correo no debe existir ya en la base de usuarios.
-    const usuarios = EH.storage.obtener('eh_usuarios', []);
-    const yaRegistrado = usuarios.some(u => u.correo === correo);
+      btnSubmit.disabled = true;
+      btnSubmit.textContent = 'Creando cuenta...';
 
-    if (yaRegistrado) {
-      mostrarError('errorRegistroCorreo', 'Este correo ya está registrado.');
-      return;
-    }
+      try {
+        await EH.client.auth.signUp({
+          email: correo,
+          password: password,
+          fullName: nombre,
+          role: tipo
+        });
 
-    // Todo correcto: guardamos el nuevo usuario.
-    usuarios.push({ nombre, correo, password, tipo });
-    EH.storage.guardar('eh_usuarios', usuarios);
+        if (contenedorMensaje) {
+          contenedorMensaje.innerHTML = `
+            <div class="mensaje mensaje-exito" role="alert">
+              ✅ Cuenta creada exitosamente. ${EH.client.isLive ? 'Revisa tu correo si requiere confirmación o inicia sesión.' : 'Ya puedes iniciar sesión.'}
+            </div>
+          `;
+        }
 
-    document.getElementById('mensajeRegistro').innerHTML =
-      '<div class="mensaje mensaje-exito">✅ Registro exitoso. Ahora inicia sesión.</div>';
+        formRegistro.reset();
+        if (registroTipo) registroTipo.value = 'cliente';
+        if (tipoCliente && tipoEmprendedor) {
+          tipoCliente.classList.add('auth__tipo--activo');
+          tipoEmprendedor.classList.remove('auth__tipo--activo');
+        }
 
-    formRegistro.reset();
-    registroTipo.value = 'cliente';
-    tipoCliente.classList.add('auth__tipo--activo');
-    tipoEmprendedor.classList.remove('auth__tipo--activo');
+        setTimeout(() => {
+          if (pestanaLogin) pestanaLogin.click();
+          const campoLogin = document.getElementById('loginCorreo');
+          if (campoLogin) campoLogin.value = correo;
+        }, 1200);
 
-    // Pasamos automáticamente a la pestaña de inicio de sesión
-    // y dejamos el correo ya escrito para comodidad del usuario.
-    setTimeout(() => {
-      pestanaLogin.click();
-      document.getElementById('loginCorreo').value = correo;
-    }, 900);
-  });
+      } catch (err) {
+        console.error('Error al registrarse:', err);
+        if (contenedorMensaje) {
+          contenedorMensaje.innerHTML = `<div class="mensaje mensaje-error" role="alert">❌ ${EH.escapeHtml(err.message || 'No se pudo crear la cuenta.')}</div>`;
+        }
+      } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = 'Registrarme';
+      }
+    });
+  }
 
   /* ------------------------------------------------------------------------
-     5) ENVÍO DEL FORMULARIO DE INICIO DE SESIÓN
+     5) Envío del formulario de Inicio de Sesión
      ------------------------------------------------------------------------ */
-  formLogin.addEventListener('submit', function (e) {
-    e.preventDefault();
+  if (formLogin) {
+    formLogin.addEventListener('submit', async function (e) {
+      e.preventDefault();
 
-    const correo = document.getElementById('loginCorreo').value.trim().toLowerCase();
-    const password = document.getElementById('loginPassword').value;
+      const btnSubmit = formLogin.querySelector('button[type="submit"]');
+      const correo = document.getElementById('loginCorreo').value.trim().toLowerCase();
+      const password = document.getElementById('loginPassword').value;
 
-    const idsError = ['errorLoginCorreo', 'errorLoginPassword'];
-    limpiarErrores(idsError);
-    document.getElementById('mensajeLogin').innerHTML = '';
+      const idsError = ['errorLoginCorreo', 'errorLoginPassword'];
+      limpiarErrores(idsError);
+      const contenedorMensaje = document.getElementById('mensajeLogin');
+      if (contenedorMensaje) contenedorMensaje.innerHTML = '';
 
-    let esValido = true;
+      let esValido = true;
 
-    if (correo === '') {
-      mostrarError('errorLoginCorreo', 'El correo es obligatorio.');
-      esValido = false;
-    } else if (!correoValido(correo)) {
-      mostrarError('errorLoginCorreo', 'El correo electrónico no es válido.');
-      esValido = false;
-    }
+      if (correo === '') {
+        mostrarError('errorLoginCorreo', 'El correo es obligatorio.');
+        esValido = false;
+      } else if (!correoValido(correo)) {
+        mostrarError('errorLoginCorreo', 'El correo electrónico no es válido.');
+        esValido = false;
+      }
 
-    if (password === '') {
-      mostrarError('errorLoginPassword', 'La contraseña es obligatoria.');
-      esValido = false;
-    }
+      if (password === '') {
+        mostrarError('errorLoginPassword', 'La contraseña es obligatoria.');
+        esValido = false;
+      }
 
-    if (!esValido) return;
+      if (!esValido) return;
 
-    const usuarios = EH.storage.obtener('eh_usuarios', []);
-    const usuario = usuarios.find(u => u.correo === correo);
+      btnSubmit.disabled = true;
+      btnSubmit.textContent = 'Ingresando...';
 
-    if (!usuario) {
-      document.getElementById('mensajeLogin').innerHTML =
-        '<div class="mensaje mensaje-error">❌ No existe una cuenta con ese correo.</div>';
-      return;
-    }
+      try {
+        const res = await EH.client.auth.signIn({
+          email: correo,
+          password: password
+        });
 
-    if (usuario.password !== password) {
-      document.getElementById('mensajeLogin').innerHTML =
-        '<div class="mensaje mensaje-error">❌ La contraseña es incorrecta.</div>';
-      return;
-    }
+        const profile = res.profile || {};
+        const role = profile.role || (res.session && res.session.tipo) || 'customer';
+        const userId = (res.user && res.user.id) || (res.session && res.session.id) || correo;
 
-    // Credenciales correctas: iniciamos sesión y redirigimos según el tipo.
-    EH.sesion.iniciar(usuario.correo, usuario.tipo);
+        // Guardar sesión normalizada
+        EH.sesion.iniciar(correo, role, userId);
 
-    if (usuario.tipo === 'emprendedor') {
-      window.location.href = 'emprendedor/panel.html';
-    } else {
-      window.location.href = 'inicio.html';
-    }
-  });
+        if (contenedorMensaje) {
+          contenedorMensaje.innerHTML = '<div class="mensaje mensaje-exito" role="alert">✅ Ingreso correcto. Redirigiendo...</div>';
+        }
+
+        setTimeout(() => {
+          if (role === 'admin') {
+            window.location.href = 'admin/panel.html';
+          } else if (role === 'entrepreneur' || role === 'emprendedor') {
+            window.location.href = 'emprendedor/panel.html';
+          } else {
+            window.location.href = 'inicio.html';
+          }
+        }, 600);
+
+      } catch (err) {
+        console.error('Error de login:', err);
+        // Prevenir enumeración de correos mostrando mensaje genérico seguro
+        if (contenedorMensaje) {
+          contenedorMensaje.innerHTML = '<div class="mensaje mensaje-error" role="alert">❌ Correo o contraseña incorrectos.</div>';
+        }
+      } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = 'Iniciar sesión';
+      }
+    });
+  }
 
 });

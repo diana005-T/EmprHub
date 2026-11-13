@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EmpreHub - Panel de Administración</title>
+
+  <!-- Google Font: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="../../css/emprendedor.css">
+  <style>
+    .admin-tabla {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: var(--espacio-md);
+      background: #fff;
+      border-radius: var(--borde-radius);
+      overflow: hidden;
+      box-shadow: var(--sombra-suave);
+    }
+    .admin-tabla th, .admin-tabla td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+      font-size: 0.9rem;
+    }
+    .admin-tabla th {
+      background: #f8fafc;
+      font-weight: 700;
+      color: #334155;
+    }
+    .admin-pestanas {
+      display: flex;
+      gap: 8px;
+      margin-bottom: var(--espacio-lg);
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .admin-btn-tab {
+      padding: 8px 16px;
+      background: none;
+      border: none;
+      font-weight: 600;
+      color: #64748b;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .admin-btn-tab.activo {
+      background: var(--color-azul);
+      color: #fff;
+    }
+    .badge-status {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .badge-status--pending { background: #fef3c7; color: #92400e; }
+    .badge-status--published { background: #dcfce7; color: #166534; }
+    .badge-status--rejected { background: #fee2e2; color: #991b1b; }
+    .badge-status--suspended { background: #f1f5f9; color: #475569; }
+  </style>
+</head>
+<body data-pagina-admin="true">
+
+  <header class="header">
+    <div class="header__contenido contenedor">
+      <a href="panel.html" class="header__logo" aria-label="Panel Administrador">
+        <img src="../../img/logo.png" alt="EmpreHub" height="42">
+      </a>
+      <button class="header__hamburguesa" aria-label="Abrir menú" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="header__nav" aria-label="Navegación admin">
+        <a href="../inicio.html">Catálogo Público</a>
+        <a href="../perfil.html">Mi Perfil</a>
+        <button data-accion="cerrar-sesion" data-destino="../../index.html" class="btn btn-alerta" style="padding:6px 14px; font-size:0.9rem;">Cerrar sesión</button>
+      </nav>
+    </div>
+  </header>
+
+  <div class="panel contenedor" style="margin-top:var(--espacio-lg);">
+    <!-- Menú lateral -->
+    <aside class="panel__menu" aria-label="Menú de administración">
+      <a href="panel.html" class="activo">🛡️ Dashboard Admin</a>
+      <a href="../inicio.html">🏪 Catálogo Público</a>
+      <a href="../perfil.html">👤 Mi Perfil</a>
+    </aside>
+
+    <section class="panel__contenido">
+      <h1 style="margin-bottom: var(--espacio-sm);">Panel de Control Administrativo</h1>
+      <p style="color:#64748b; font-size:0.95rem; margin-bottom: var(--espacio-lg);">
+        Supervisión global de la plataforma, control de usuarios, auditoría y aprobación de emprendimientos.
+      </p>
+
+      <!-- Métricas Resumen -->
+      <div class="panel__resumen" style="margin-bottom: var(--espacio-xl);">
+        <div class="panel__resumen-tarjeta">
+          <strong id="metricUsers">0</strong>
+          Usuarios registrados
+        </div>
+        <div class="panel__resumen-tarjeta" style="border-left:4px solid #f59e0b;">
+          <strong id="metricPending">0</strong>
+          Negocios pendientes
+        </div>
+        <div class="panel__resumen-tarjeta" style="border-left:4px solid var(--color-verde);">
+          <strong id="metricPublished">0</strong>
+          Negocios publicados
+        </div>
+        <div class="panel__resumen-tarjeta">
+          <strong id="metricOrders">0</strong>
+          Pedidos totales
+        </div>
+        <div class="panel__resumen-tarjeta" style="border-left:4px solid var(--color-azul);">
+          <strong id="metricSales">S/ 0.00</strong>
+          Volumen de ventas
+        </div>
+      </div>
+
+      <!-- Pestañas de Gestión -->
+      <div class="admin-pestanas" role="tablist">
+        <button type="button" class="admin-btn-tab activo" data-seccion="seccionEmprendimientos">🏪 Emprendimientos</button>
+        <button type="button" class="admin-btn-tab" data-seccion="seccionUsuarios">👥 Usuarios</button>
+        <button type="button" class="admin-btn-tab" data-seccion="seccionPedidos">🧾 Pedidos Globales</button>
+      </div>
+
+      <!-- TAB 1: EMPRENDIMIENTOS -->
+      <div id="seccionEmprendimientos" class="admin-bloque">
+        <h2 style="font-size:1.15rem; margin-bottom:var(--espacio-sm);">Revisión y Aprobación de Emprendimientos</h2>
+        <div id="tablaEmprendimientosContenedor" style="overflow-x:auto;"></div>
+      </div>
+
+      <!-- TAB 2: USUARIOS -->
+      <div id="seccionUsuarios" class="admin-bloque oculto">
+        <h2 style="font-size:1.15rem; margin-bottom:var(--espacio-sm);">Directorio de Usuarios</h2>
+        <div id="tablaUsuariosContenedor" style="overflow-x:auto;"></div>
+      </div>
+
+      <!-- TAB 3: PEDIDOS -->
+      <div id="seccionPedidos" class="admin-bloque oculto">
+        <h2 style="font-size:1.15rem; margin-bottom:var(--espacio-sm);">Supervisión de Pedidos</h2>
+        <div id="tablaPedidosContenedor" style="overflow-x:auto;"></div>
+      </div>
+
+    </section>
+  </div>
+
+  <div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+  <!-- SDK Supabase y Módulos -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../../js/supabase-config.js"></script>
+  <script src="../../js/supabase-client.js"></script>
+  <script src="../../js/app.js"></script>
+  <script src="../../js/admin.js"></script>
+</body>
+</html>
+

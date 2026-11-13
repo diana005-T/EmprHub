@@ -3,7 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EmpreHub - Mi emprendimiento</title>
+  <title>EmpreHub - Mi Emprendimiento</title>
+
+  <!-- Google Font: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="../../css/style.css">
   <link rel="stylesheet" href="../../css/login.css">
@@ -13,64 +18,69 @@
 
   <header class="header">
     <div class="header__contenido contenedor">
-      <a href="panel.html" class="header__logo">
-        <img src="../../img/logo.png" alt="EmpreHub">
+      <a href="panel.html" class="header__logo" aria-label="Panel principal">
+        <img src="../../img/logo.png" alt="EmpreHub" height="42">
       </a>
-      <button class="header__hamburguesa" aria-label="Abrir menú">
+      <button class="header__hamburguesa" aria-label="Abrir menú" aria-expanded="false">
         <span></span><span></span><span></span>
       </button>
-      <nav class="header__nav">
-        <a href="../perfil.html">Perfil</a>
-        <button data-accion="cerrar-sesion" data-destino="../../index.html">Cerrar sesión</button>
+      <nav class="header__nav" aria-label="Navegación emprendedor">
+        <a href="../inicio.html">Ver catálogo</a>
+        <a href="../perfil.html">Mi Perfil</a>
+        <button data-accion="cerrar-sesion" data-destino="../../index.html" class="btn btn-alerta" style="padding:6px 14px; font-size:0.9rem;">Cerrar sesión</button>
       </nav>
     </div>
   </header>
 
-  <div class="panel">
-    <aside class="panel__menu">
+  <div class="panel contenedor" style="margin-top:var(--espacio-lg);">
+    <aside class="panel__menu" aria-label="Menú del panel">
       <a href="panel.html">🏠 Panel</a>
-      <a href="mi-emprendimiento.html" class="activo">🏪 Mi emprendimiento</a>
+      <a href="mi-emprendimiento.html" class="activo" aria-current="page">🏪 Mi emprendimiento</a>
       <a href="productos.html">📦 Mis productos</a>
       <a href="pedidos.html">🧾 Pedidos</a>
+      <a href="promociones.html">🎯 Promociones</a>
     </aside>
 
     <section class="panel__contenido">
       <div class="tarjeta-formulario" style="margin:0;">
-        <h2 id="tituloFormEmprendimiento">Crear mi emprendimiento</h2>
+        <h2 id="tituloFormEmprendimiento">Configurar Mi Emprendimiento</h2>
+        <p style="font-size:0.9rem; color:#666; margin-bottom:var(--espacio-md);">
+          Plan gratuito inicial: 1 emprendimiento por emprendedor. Toda creación o modificación será revisada por administración antes de publicarse.
+        </p>
 
         <form id="formEmprendimiento" novalidate>
           <div class="campo">
-            <label for="empNombreInput">Nombre del emprendimiento</label>
-            <input type="text" id="empNombreInput" placeholder="Ej. Doña Lupe">
+            <label for="empNombreInput">Nombre comercial del emprendimiento</label>
+            <input type="text" id="empNombreInput" placeholder="Ej. Doña Lupe Repostería" required>
             <span class="error-campo" id="errorEmpNombre"></span>
           </div>
 
           <div class="campo">
-            <label for="empDescripcionInput">Descripción</label>
-            <input type="text" id="empDescripcionInput" placeholder="Cuenta brevemente de qué trata tu emprendimiento">
+            <label for="empDescripcionInput">Descripción o propuesta de valor</label>
+            <input type="text" id="empDescripcionInput" placeholder="Cuenta de qué trata tu emprendimiento (mínimo 10 caracteres)" required>
             <span class="error-campo" id="errorEmpDescripcion"></span>
           </div>
 
           <div class="campo">
-            <label for="empCategoriaInput">Categoría</label>
-            <select id="empCategoriaInput">
+            <label for="empCategoriaInput">Categoría principal</label>
+            <select id="empCategoriaInput" required>
               <option value="">Selecciona una categoría</option>
-              <option value="Platos">🍽️ Platos</option>
-              <option value="Bebidas">🥤 Bebidas</option>
-              <option value="Productos">🛍️ Productos</option>
-              <option value="Postres">🧁 Postres</option>
+              <option value="Platos">🍽️ Platos y Comida</option>
+              <option value="Bebidas">🥤 Bebidas y Jugos</option>
+              <option value="Productos">🛍️ Productos y Artesanías</option>
+              <option value="Postres">🧁 Postres y Pasteles</option>
             </select>
             <span class="error-campo" id="errorEmpCategoria"></span>
           </div>
 
           <div class="campo">
-            <label for="empHorarioInput">Horario de atención (opcional)</label>
-            <input type="text" id="empHorarioInput" placeholder="Ej. Lunes a sábado, 9am - 6pm">
+            <label for="empHorarioInput">Horario habitual de atención (opcional)</label>
+            <input type="text" id="empHorarioInput" placeholder="Ej. Lunes a sábado, 10:00 am - 6:00 pm">
           </div>
 
           <div class="campo">
-            <label>Medios de pago</label>
-            <div class="checkbox-grupo">
+            <label>Medios de pago coordinados</label>
+            <div class="checkbox-grupo" style="display:flex; gap:16px; margin-top:6px;">
               <label><input type="checkbox" name="medioPago" value="Yape"> Yape</label>
               <label><input type="checkbox" name="medioPago" value="Plin"> Plin</label>
               <label><input type="checkbox" name="medioPago" value="Efectivo"> Efectivo</label>
@@ -80,12 +90,18 @@
 
           <div id="mensajeEmprendimiento"></div>
 
-          <button type="submit" id="btnGuardarEmprendimiento" class="btn btn-secundario btn-bloque">Crear emprendimiento</button>
+          <button type="submit" id="btnGuardarEmprendimiento" class="btn btn-secundario btn-bloque">Guardar emprendimiento</button>
         </form>
       </div>
     </section>
   </div>
 
+  <div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+  <!-- SDK Supabase y Módulos -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../../js/supabase-config.js"></script>
+  <script src="../../js/supabase-client.js"></script>
   <script src="../../js/app.js"></script>
   <script src="../../js/emprendedor.js"></script>
 </body>

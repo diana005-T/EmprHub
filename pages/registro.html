@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EmpreHub - Ingresar</title>
 
+  <!-- Google Font: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="../css/style.css">
   <link rel="stylesheet" href="../css/login.css">
 </head>
@@ -13,31 +18,37 @@
   <main class="auth">
     <div class="auth__tarjeta">
 
+      <a href="inicio.html" style="display:inline-block; margin-bottom: 12px; font-weight:600; color:var(--color-azul);">← Explorar catálogo público</a>
+
       <img src="../img/logo.png" alt="Logo de EmpreHub" class="auth__logo">
       <h1 class="auth__titulo">Bienvenido a EmpreHub</h1>
 
       <!-- ============================================================
            PESTAÑAS: Iniciar sesión / Crear cuenta
       ============================================================ -->
-      <div class="auth__pestanas">
-        <button type="button" id="pestanaLogin" class="auth__pestana auth__pestana--activa">Iniciar sesión</button>
-        <button type="button" id="pestanaRegistro" class="auth__pestana">Crear cuenta</button>
+      <div class="auth__pestanas" role="tablist">
+        <button type="button" id="pestanaLogin" class="auth__pestana auth__pestana--activa" role="tab" aria-selected="true" aria-controls="formLogin">Iniciar sesión</button>
+        <button type="button" id="pestanaRegistro" class="auth__pestana" role="tab" aria-selected="false" aria-controls="formRegistro">Crear cuenta</button>
       </div>
 
       <!-- ============================================================
            FORMULARIO: INICIAR SESIÓN
       ============================================================ -->
-      <form id="formLogin" novalidate>
+      <form id="formLogin" role="tabpanel" novalidate>
         <div class="campo">
           <label for="loginCorreo">Correo electrónico</label>
-          <input type="email" id="loginCorreo" placeholder="tucorreo@ejemplo.com">
+          <input type="email" id="loginCorreo" placeholder="tucorreo@ejemplo.com" required autocomplete="email">
           <span class="error-campo" id="errorLoginCorreo"></span>
         </div>
 
         <div class="campo">
           <label for="loginPassword">Contraseña</label>
-          <input type="password" id="loginPassword" placeholder="Tu contraseña">
+          <input type="password" id="loginPassword" placeholder="Tu contraseña" required autocomplete="current-password">
           <span class="error-campo" id="errorLoginPassword"></span>
+        </div>
+
+        <div style="text-align: right; margin-bottom: var(--espacio-md);">
+          <a href="recuperar-password.html" style="font-size: 0.85rem; color: var(--color-azul); font-weight: 500;">¿Olvidaste tu contraseña?</a>
         </div>
 
         <div id="mensajeLogin"></div>
@@ -48,42 +59,42 @@
       <!-- ============================================================
            FORMULARIO: CREAR CUENTA
       ============================================================ -->
-      <form id="formRegistro" class="oculto" novalidate>
+      <form id="formRegistro" class="oculto" role="tabpanel" novalidate>
 
         <!-- Paso 1: elegir el tipo de usuario -->
         <p style="font-weight:600; margin-bottom:8px;">¿Cómo quieres registrarte?</p>
-        <div class="auth__tipos">
-          <div class="auth__tipo auth__tipo--activo" data-tipo="cliente" id="tipoCliente">
-            <span>🛍️</span> Soy cliente
-          </div>
-          <div class="auth__tipo" data-tipo="emprendedor" id="tipoEmprendedor">
-            <span>🏪</span> Soy emprendedor
-          </div>
+        <div class="auth__tipos" role="group" aria-label="Tipo de cuenta">
+          <button type="button" class="auth__tipo auth__tipo--activo" data-tipo="cliente" id="tipoCliente">
+            <span aria-hidden="true">🛍️</span> Soy cliente
+          </button>
+          <button type="button" class="auth__tipo" data-tipo="emprendedor" id="tipoEmprendedor">
+            <span aria-hidden="true">🏪</span> Soy emprendedor
+          </button>
         </div>
         <!-- Guarda el tipo elegido para enviarlo junto con el formulario -->
         <input type="hidden" id="registroTipo" value="cliente">
 
         <div class="campo">
           <label for="registroNombre">Nombre completo</label>
-          <input type="text" id="registroNombre" placeholder="Ej. María Torres">
+          <input type="text" id="registroNombre" placeholder="Ej. María Torres" required autocomplete="name">
           <span class="error-campo" id="errorRegistroNombre"></span>
         </div>
 
         <div class="campo">
           <label for="registroCorreo">Correo electrónico</label>
-          <input type="email" id="registroCorreo" placeholder="tucorreo@ejemplo.com">
+          <input type="email" id="registroCorreo" placeholder="tucorreo@ejemplo.com" required autocomplete="email">
           <span class="error-campo" id="errorRegistroCorreo"></span>
         </div>
 
         <div class="campo">
           <label for="registroPassword">Contraseña</label>
-          <input type="password" id="registroPassword" placeholder="Mínimo 8 caracteres, letras y números">
+          <input type="password" id="registroPassword" placeholder="Mínimo 8 caracteres, letras y números" required autocomplete="new-password">
           <span class="error-campo" id="errorRegistroPassword"></span>
         </div>
 
         <div class="campo">
           <label for="registroConfirmar">Confirmar contraseña</label>
-          <input type="password" id="registroConfirmar" placeholder="Repite tu contraseña">
+          <input type="password" id="registroConfirmar" placeholder="Repite tu contraseña" required autocomplete="new-password">
           <span class="error-campo" id="errorRegistroConfirmar"></span>
         </div>
 
@@ -95,6 +106,10 @@
     </div>
   </main>
 
+  <!-- SDK Supabase y módulos -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/supabase-config.js"></script>
+  <script src="../js/supabase-client.js"></script>
   <script src="../js/app.js"></script>
   <script src="../js/auth.js"></script>
 </body>

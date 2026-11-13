@@ -1,45 +1,106 @@
 /* ==========================================================================
    EmpreHub - emprendedor.js
-   Lógica de las 4 pantallas del EMPRENDEDOR:
-     A) panel.html            -> resumen general
-     B) mi-emprendimiento.html -> crear/editar los datos del emprendimiento
-     C) productos.html        -> agregar, editar y eliminar productos
-     D) pedidos.html          -> ver y actualizar el estado de los pedidos
+   Lógica Integral del Panel del Emprendedor:
+     A) panel.html             -> Resumen métrico, estado de aprobación y alertas
+     B) mi-emprendimiento.html -> Creación/edición y subida de logotipo a Storage
+     C) productos.html         -> Gestión de productos, stock, fotos e inventario
+     D) pedidos.html           -> Gestión en tiempo real del estado de pedidos
    ========================================================================== */
 
-// Devuelve el emprendimiento del usuario en sesión (o null si aún no creó uno).
-function obtenerMiEmprendimiento(correo) {
-  const emprendimientos = EH.storage.obtener('eh_emprendimientos', []);
-  return emprendimientos.find(e => e.propietario === correo) || null;
-}
-
-document.addEventListener('DOMContentLoaded', function () {
-
-  // Todas las pantallas de este archivo son exclusivas del emprendedor.
+document.addEventListener('DOMContentLoaded', async function () {
   const enPanelEmprendedor = document.body.dataset.paginaEmprendedor;
   if (!enPanelEmprendedor) return;
 
-  if (!EH.protegerPagina('emprendedor', '../registro.html')) return;
+  // Proteger la sección: exige rol emprendedor (o admin con privilegios)
+  const tieneAcceso = await EH.protegerPagina('entrepreneur', '../registro.html');
+  if (!tieneAcceso) return;
 
   const sesion = EH.sesion.obtener();
+  const userId = sesion.id || sesion.correo;
+
+  // Función auxiliar para obtener el emprendimiento del usuario autenticado
+  async function obtenerMiEmprendimiento() {
+    try {
+      const negocios = await EH.client.businesses.getByOwner(userId);
+      return negocios && negocios.length > 0 ? negocios[0] : null;
+    } catch (e) {
+      console.warn('Error obteniendo emprendimiento:', e);
+      return null;
+    }
+  }
 
   /* ==========================================================================
-     A) PANEL PRINCIPAL (panel.html)
+     A) RESUMEN GENERAL (panel.html)
      ========================================================================== */
   const resumenProductos = document.getElementById('resumenTotalProductos');
   if (resumenProductos) {
-    const miEmp = obtenerMiEmprendimiento(sesion.correo);
-    const productos = miEmp ? EH.storage.obtener('eh_productos', []).filter(p => p.emprendimientoId === miEmp.id) : [];
-    const pedidos = miEmp ? EH.storage.obtener('eh_pedidos', []).filter(p => p.emprendimientoId === miEmp.id) : [];
-    const pendientes = pedidos.filter(p => p.estado === 'Pendiente');
-
-    document.getElementById('resumenNombreEmp').textContent = miEmp ? miEmp.nombre : 'Aún no creaste tu emprendimiento';
-    resumenProductos.textContent = productos.length;
-    document.getElementById('resumenTotalPedidos').textContent = pedidos.length;
-    document.getElementById('resumenPendientes').textContent = pendientes.length;
+    const miEmp = await obtenerMiEmprendimiento();
+    const nombreEmpEl = document.getElementById('resumenNombreEmp');
+    const avisoSinEmp = document.getElementById('avisoSinEmprendimiento');
 
     if (!miEmp) {
-      document.getElementById('avisoSinEmprendimiento').classList.remove('oculto');
+      nombreEmpEl.textContent = 'Aún no has registrado tu emprendimiento';
+      if (avisoSinEmp) avisoSinEmp.classList.remove('oculto');
+      return;
+    }
+
+    nombreEmpEl.textContent = miEmp.name || miEmp.nombre;
+
+    // Banner de estado de aprobación
+    let bannerEstado = document.getElementById('bannerEstadoAprobacion');
+    if (!bannerEstado) {
+      bannerEstado = document.createElement('div');
+      bannerEstado.id = 'bannerEstadoAprobacion';
+      bannerEstado.style.marginBottom = 'var(--espacio-lg)';
+      const seccion = document.querySelector('.panel__contenido');
+      if (seccion) seccion.insertBefore(bannerEstado, seccion.querySelector('.panel__resumen'));
+    }
+
+    const estado = miEmp.status || 'pending';
+    if (estado === 'pending') {
+      bannerEstado.className = 'mensaje';
+      bannerEstado.style.background = '#FFF3CD';
+      bannerEstado.style.color = '#856404';
+      bannerEstado.style.border = '1px solid #FFEEBA';
+      bannerEstado.innerHTML = '⏳ <strong>Emprendimiento en revisión:</strong> Tu negocio está pendiente de aprobación por el equipo de administración. Una vez aprobado, aparecerá automáticamente en el catálogo público.';
+    } else if (estado === 'published') {
+      bannerEstado.className = 'mensaje mensaje-exito';
+      bannerEstado.innerHTML = '✅ <strong>Emprendimiento Publicado:</strong> Tu negocio se encuentra activo y visible para todos los clientes en el catálogo.';
+    } else if (estado === 'rejected') {
+      bannerEstado.className = 'mensaje mensaje-error';
+      bannerEstado.innerHTML = `❌ <strong>Emprendimiento Rechazado:</strong> ${EH.escapeHtml(miEmp.status_reason || 'Por favor revisa la información de tu negocio.')}`;
+    } else if (estado === 'suspended') {
+      bannerEstado.className = 'mensaje mensaje-error';
+      bannerEstado.innerHTML = `⚠️ <strong>Emprendimiento Suspendido:</strong> Tu negocio ha sido pausado temporalmente. Contacta a soporte para más detalles.`;
+    }
+
+    try {
+      const productos = await EH.client.products.getByBusiness(miEmp.id, { onlyActive: false });
+      const pedidos = await EH.client.orders.getByBusiness(miEmp.id);
+      const pendientes = pedidos.filter(p => (p.status || p.estado) === 'Pendiente');
+      const ventasTotales = pedidos
+        .filter(p => (p.status || p.estado) !== 'Cancelado')
+        .reduce((sum, p) => sum + Number(p.total_amount || p.total || 0), 0);
+
+      resumenProductos.textContent = productos.length;
+      document.getElementById('resumenTotalPedidos').textContent = pedidos.length;
+      document.getElementById('resumenPendientes').textContent = pendientes.length;
+
+      let elVentas = document.getElementById('resumenVentasTotales');
+      if (!elVentas) {
+        const contResumen = document.querySelector('.panel__resumen');
+        if (contResumen) {
+          const cardVentas = document.createElement('div');
+          cardVentas.className = 'panel__resumen-tarjeta';
+          cardVentas.innerHTML = `<strong id="resumenVentasTotales">S/ 0.00</strong> Ingresos generados`;
+          contResumen.appendChild(cardVentas);
+          elVentas = document.getElementById('resumenVentasTotales');
+        }
+      }
+      if (elVentas) elVentas.textContent = 'S/ ' + ventasTotales.toFixed(2);
+
+    } catch (e) {
+      console.warn('Error cargando métricas:', e);
     }
   }
 
@@ -48,24 +109,62 @@ document.addEventListener('DOMContentLoaded', function () {
      ========================================================================== */
   const formEmprendimiento = document.getElementById('formEmprendimiento');
   if (formEmprendimiento) {
-    const miEmp = obtenerMiEmprendimiento(sesion.correo);
+    const miEmp = await obtenerMiEmprendimiento();
+    let logoFileSeleccionado = null;
 
-    // Si ya existe, precargamos el formulario con sus datos (modo edición).
-    if (miEmp) {
-      document.getElementById('empNombreInput').value = miEmp.nombre;
-      document.getElementById('empDescripcionInput').value = miEmp.descripcion;
-      document.getElementById('empCategoriaInput').value = miEmp.categoria;
-      document.getElementById('empHorarioInput').value = miEmp.horario || '';
-      document.querySelectorAll('input[name="medioPago"]').forEach(chk => {
-        chk.checked = miEmp.mediosPago.includes(chk.value);
+    // Agregar campo de carga de Logo si no existe en el HTML
+    let contenedorLogo = document.getElementById('campoLogoEmprendimiento');
+    if (!contenedorLogo) {
+      contenedorLogo = document.createElement('div');
+      contenedorLogo.id = 'campoLogoEmprendimiento';
+      contenedorLogo.className = 'campo';
+      contenedorLogo.innerHTML = `
+        <label for="empLogoInput">Logotipo o Fotografía del negocio (Máx 2MB, JPG/PNG/WebP)</label>
+        <input type="file" id="empLogoInput" accept="image/jpeg,image/png,image/webp">
+        <div id="vistaPreviaLogo" style="margin-top:8px;"></div>
+      `;
+      formEmprendimiento.insertBefore(contenedorLogo, formEmprendimiento.querySelector('.campo'));
+
+      const inputLogo = document.getElementById('empLogoInput');
+      const vistaLogo = document.getElementById('vistaPreviaLogo');
+      inputLogo.addEventListener('change', () => {
+        if (inputLogo.files && inputLogo.files[0]) {
+          logoFileSeleccionado = inputLogo.files[0];
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            vistaLogo.innerHTML = `<img src="${e.target.result}" alt="Vista previa logo" style="max-height:80px; border-radius:8px; border:1px solid #ddd;">`;
+          };
+          reader.readAsDataURL(logoFileSeleccionado);
+        }
       });
+    }
+
+    // Precargar datos si ya existe
+    if (miEmp) {
+      document.getElementById('empNombreInput').value = miEmp.name || miEmp.nombre || '';
+      document.getElementById('empDescripcionInput').value = miEmp.description || miEmp.descripcion || '';
+      document.getElementById('empCategoriaInput').value = (miEmp.category && miEmp.category.name) || miEmp.categoria || '';
+      document.getElementById('empHorarioInput').value = miEmp.operating_hours || miEmp.horario || '';
+
+      const medios = miEmp.payment_methods || miEmp.mediosPago || [];
+      document.querySelectorAll('input[name="medioPago"]').forEach(chk => {
+        chk.checked = medios.includes(chk.value);
+      });
+
+      if (miEmp.logo_url) {
+        document.getElementById('vistaPreviaLogo').innerHTML = `
+          <img src="${EH.escapeHtml(miEmp.logo_url)}" alt="Logo actual" style="max-height:80px; border-radius:8px; border:1px solid #ddd;">
+        `;
+      }
+
       document.getElementById('tituloFormEmprendimiento').textContent = 'Editar mi emprendimiento';
       document.getElementById('btnGuardarEmprendimiento').textContent = 'Guardar cambios';
     }
 
-    formEmprendimiento.addEventListener('submit', function (e) {
+    formEmprendimiento.addEventListener('submit', async function (e) {
       e.preventDefault();
 
+      const btnSubmit = document.getElementById('btnGuardarEmprendimiento');
       const nombre = document.getElementById('empNombreInput').value.trim();
       const descripcion = document.getElementById('empDescripcionInput').value.trim();
       const categoria = document.getElementById('empCategoriaInput').value;
@@ -73,22 +172,19 @@ document.addEventListener('DOMContentLoaded', function () {
       const mediosPago = Array.from(document.querySelectorAll('input[name="medioPago"]:checked')).map(c => c.value);
 
       const idsError = ['errorEmpNombre', 'errorEmpDescripcion', 'errorEmpCategoria', 'errorEmpMediosPago'];
-      idsError.forEach(id => document.getElementById(id).textContent = '');
+      idsError.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '';
+      });
 
       let esValido = true;
 
-      if (nombre === '') {
-        document.getElementById('errorEmpNombre').textContent = 'El nombre es obligatorio.';
-        esValido = false;
-      } else if (nombre.length < 3) {
+      if (nombre.length < 3) {
         document.getElementById('errorEmpNombre').textContent = 'El nombre debe tener mínimo 3 caracteres.';
         esValido = false;
       }
 
-      if (descripcion === '') {
-        document.getElementById('errorEmpDescripcion').textContent = 'La descripción es obligatoria.';
-        esValido = false;
-      } else if (descripcion.length < 10) {
+      if (descripcion.length < 10) {
         document.getElementById('errorEmpDescripcion').textContent = 'La descripción debe tener mínimo 10 caracteres.';
         esValido = false;
       }
@@ -105,39 +201,60 @@ document.addEventListener('DOMContentLoaded', function () {
 
       if (!esValido) return;
 
-      const emprendimientos = EH.storage.obtener('eh_emprendimientos', []);
-      const existente = emprendimientos.find(em => em.propietario === sesion.correo);
+      btnSubmit.disabled = true;
+      btnSubmit.textContent = 'Guardando datos...';
 
-      if (existente) {
-        // Editar: actualizamos los datos conservando el mismo id.
-        existente.nombre = nombre;
-        existente.descripcion = descripcion;
-        existente.categoria = categoria;
-        existente.horario = horario;
-        existente.mediosPago = mediosPago;
-      } else {
-        // Crear nuevo emprendimiento asociado al emprendedor en sesión.
-        emprendimientos.push({
-          id: EH.generarId(),
-          propietario: sesion.correo,
-          nombre, descripcion, categoria, horario, mediosPago,
-          imagen: '',
-          promociones: []
-        });
+      try {
+        let empGuardado = null;
+
+        if (miEmp) {
+          empGuardado = await EH.client.businesses.update(miEmp.id, {
+            name: nombre,
+            description: descripcion,
+            category_id: categoria,
+            categoria: categoria,
+            operating_hours: horario,
+            payment_methods: mediosPago,
+            mediosPago: mediosPago
+          });
+        } else {
+          empGuardado = await EH.client.businesses.create({
+            name: nombre,
+            description: descripcion,
+            category_id: categoria,
+            operating_hours: horario,
+            payment_methods: mediosPago,
+            plan: 'free'
+          });
+        }
+
+        // Subir logo si se seleccionó archivo
+        if (logoFileSeleccionado && empGuardado) {
+          btnSubmit.textContent = 'Subiendo fotografía del logo...';
+          await EH.client.storage.uploadBusinessLogo(logoFileSeleccionado, empGuardado.id || miEmp.id);
+        }
+
+        document.getElementById('mensajeEmprendimiento').innerHTML =
+          '<div class="mensaje mensaje-exito" role="alert">✅ Datos guardados correctamente. Tu emprendimiento está listo para revisión.</div>';
+        EH.toast('Emprendimiento guardado exitosamente.');
+
+      } catch (err) {
+        console.error(err);
+        document.getElementById('mensajeEmprendimiento').innerHTML =
+          `<div class="mensaje mensaje-error" role="alert">❌ ${EH.escapeHtml(err.message || 'Error al guardar emprendimiento')}</div>`;
+      } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = miEmp ? 'Guardar cambios' : 'Crear emprendimiento';
       }
-
-      EH.storage.guardar('eh_emprendimientos', emprendimientos);
-      document.getElementById('mensajeEmprendimiento').innerHTML =
-        '<div class="mensaje mensaje-exito">✅ Datos guardados correctamente.</div>';
     });
   }
 
   /* ==========================================================================
-     C) MIS PRODUCTOS (productos.html)
+     C) GESTIÓN DE PRODUCTOS E IMÁGENES (productos.html)
      ========================================================================== */
   const listaProductosAdmin = document.getElementById('listaProductosAdmin');
   if (listaProductosAdmin) {
-    const miEmp = obtenerMiEmprendimiento(sesion.correo);
+    const miEmp = await obtenerMiEmprendimiento();
 
     if (!miEmp) {
       document.getElementById('avisoCrearEmprendimiento').classList.remove('oculto');
@@ -146,68 +263,124 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     const formProducto = document.getElementById('formProducto');
-    let editandoId = null; // si no es null, el formulario está EDITANDO ese producto
+    let editandoId = null;
+    let fotoProductoSeleccionada = null;
 
-    function pintarProductos() {
-      const productos = EH.storage.obtener('eh_productos', []).filter(p => p.emprendimientoId === miEmp.id);
+    // Agregar campo de carga de fotografía de producto
+    let campoFoto = document.getElementById('campoFotoProducto');
+    if (!campoFoto) {
+      campoFoto = document.createElement('div');
+      campoFoto.id = 'campoFotoProducto';
+      campoFoto.className = 'campo';
+      campoFoto.innerHTML = `
+        <label for="prodFotoInput">Fotografía real del producto (Máx 2MB, JPG/PNG/WebP, máx 3 por producto)</label>
+        <input type="file" id="prodFotoInput" accept="image/jpeg,image/png,image/webp">
+        <div id="vistaPreviaFotoProd" style="margin-top:6px;"></div>
+      `;
+      formProducto.insertBefore(campoFoto, formProducto.querySelector('.carrito__acciones'));
 
-      if (productos.length === 0) {
-        listaProductosAdmin.innerHTML = '<div class="estado-vacio"><p>Todavía no agregaste productos.</p></div>';
-        return;
+      const inputFoto = document.getElementById('prodFotoInput');
+      const vistaFoto = document.getElementById('vistaPreviaFotoProd');
+      inputFoto.addEventListener('change', () => {
+        if (inputFoto.files && inputFoto.files[0]) {
+          fotoProductoSeleccionada = inputFoto.files[0];
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            vistaFoto.innerHTML = `<img src="${e.target.result}" alt="Vista previa producto" style="max-height:80px; border-radius:8px; border:1px solid #ddd;">`;
+          };
+          reader.readAsDataURL(fotoProductoSeleccionada);
+        }
+      });
+    }
+
+    async function pintarProductos() {
+      listaProductosAdmin.innerHTML = '<div class="estado-cargando"><div class="spinner"></div><p>Cargando productos...</p></div>';
+
+      try {
+        const productos = await EH.client.products.getByBusiness(miEmp.id, { onlyActive: false });
+
+        if (!productos || productos.length === 0) {
+          listaProductosAdmin.innerHTML = '<div class="estado-vacio"><p>Todavía no has agregado ningún producto a tu catálogo.</p></div>';
+          return;
+        }
+
+        listaProductosAdmin.innerHTML = productos.map(p => {
+          const imagenHtml = p.main_image_url || p.imagen
+            ? `<img src="${EH.escapeHtml(p.main_image_url || p.imagen)}" alt="${EH.escapeHtml(p.name || p.nombre)}" style="width:48px; height:48px; object-fit:cover; border-radius:6px;">`
+            : `<div style="width:48px; height:48px; display:flex; align-items:center; justify-content:center; background:#eee; border-radius:6px;">📦</div>`;
+
+          return `
+            <div class="producto-admin" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+              ${imagenHtml}
+              <div class="producto-admin__nombre" style="flex:1;">
+                <strong>${EH.escapeHtml(p.name || p.nombre)}</strong>
+                <div><span style="font-size:0.85rem; color:#666;">${EH.escapeHtml((p.category && p.category.name) || p.categoria || '')}</span> · <strong>Stock: ${p.stock}</strong></div>
+              </div>
+              <div style="font-weight:700; color:var(--color-azul);">S/ ${Number(p.price || p.precio).toFixed(2)}</div>
+              <div style="display:flex; gap:8px;">
+                <button class="btn btn-secundario" data-accion="editar" data-id="${EH.escapeHtml(p.id)}" type="button">Editar</button>
+                <button class="btn btn-alerta" data-accion="eliminar" data-id="${EH.escapeHtml(p.id)}" type="button">Eliminar</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // Manejar edición
+        listaProductosAdmin.querySelectorAll('[data-accion="editar"]').forEach(btn => {
+          btn.addEventListener('click', function () {
+            const prod = productos.find(p => p.id === btn.dataset.id);
+            if (!prod) return;
+            editandoId = prod.id;
+            document.getElementById('prodNombreInput').value = prod.name || prod.nombre;
+            document.getElementById('prodDescripcionInput').value = prod.description || prod.descripcion || '';
+            document.getElementById('prodCategoriaInput').value = (prod.category && prod.category.name) || prod.categoria || '';
+            document.getElementById('prodPrecioInput').value = prod.price || prod.precio;
+            document.getElementById('prodStockInput').value = prod.stock;
+
+            document.getElementById('tituloFormProducto').textContent = 'Editar producto';
+            document.getElementById('btnGuardarProducto').textContent = 'Guardar cambios';
+            formProducto.scrollIntoView({ behavior: 'smooth' });
+          });
+        });
+
+        // Manejar eliminación
+        listaProductosAdmin.querySelectorAll('[data-accion="eliminar"]').forEach(btn => {
+          btn.addEventListener('click', async function () {
+            const confirmado = await EH.confirmar('¿Estás seguro de que deseas eliminar este producto?');
+            if (!confirmado) return;
+
+            try {
+              await EH.client.products.delete(btn.dataset.id);
+              EH.toast('Producto eliminado correctamente.');
+              await pintarProductos();
+            } catch (err) {
+              console.error(err);
+              EH.toast('No se pudo eliminar el producto.');
+            }
+          });
+        });
+
+      } catch (err) {
+        console.error(err);
+        listaProductosAdmin.innerHTML = '<div class="estado-vacio"><p>Error al cargar productos.</p></div>';
       }
-
-      listaProductosAdmin.innerHTML = productos.map(p => `
-        <div class="producto-admin">
-          <div class="producto-admin__nombre">
-            <strong>${p.nombre}</strong>
-            <span>${p.categoria} · Stock: ${p.stock}</span>
-          </div>
-          <div>S/ ${p.precio.toFixed(2)}</div>
-          <button class="btn btn-secundario" data-accion="editar" data-id="${p.id}">Editar</button>
-          <button class="btn btn-alerta" data-accion="eliminar" data-id="${p.id}">Eliminar</button>
-        </div>
-      `).join('');
-
-      listaProductosAdmin.querySelectorAll('[data-accion="editar"]').forEach(btn => {
-        btn.addEventListener('click', function () {
-          const producto = productos.find(p => p.id === btn.dataset.id);
-          editandoId = producto.id;
-          document.getElementById('prodNombreInput').value = producto.nombre;
-          document.getElementById('prodDescripcionInput').value = producto.descripcion;
-          document.getElementById('prodCategoriaInput').value = producto.categoria;
-          document.getElementById('prodPrecioInput').value = producto.precio;
-          document.getElementById('prodStockInput').value = producto.stock;
-          document.getElementById('tituloFormProducto').textContent = 'Editar producto';
-          document.getElementById('btnGuardarProducto').textContent = 'Guardar cambios';
-          formProducto.scrollIntoView({ behavior: 'smooth' });
-        });
-      });
-
-      listaProductosAdmin.querySelectorAll('[data-accion="eliminar"]').forEach(btn => {
-        btn.addEventListener('click', async function () {
-          const confirmado = await EH.confirmar('¿Estás seguro de que deseas eliminar este producto?');
-          if (!confirmado) return;
-          let todos = EH.storage.obtener('eh_productos', []);
-          todos = todos.filter(p => p.id !== btn.dataset.id);
-          EH.storage.guardar('eh_productos', todos);
-          EH.toast('Producto eliminado.');
-          pintarProductos();
-        });
-      });
     }
 
     function limpiarFormularioProducto() {
       formProducto.reset();
       editandoId = null;
+      fotoProductoSeleccionada = null;
+      document.getElementById('vistaPreviaFotoProd').innerHTML = '';
       document.getElementById('tituloFormProducto').textContent = 'Agregar producto';
       document.getElementById('btnGuardarProducto').textContent = 'Agregar producto';
     }
 
     document.getElementById('btnCancelarEdicionProducto').addEventListener('click', limpiarFormularioProducto);
 
-    formProducto.addEventListener('submit', function (e) {
+    formProducto.addEventListener('submit', async function (e) {
       e.preventDefault();
 
+      const btnSubmit = document.getElementById('btnGuardarProducto');
       const nombre = document.getElementById('prodNombreInput').value.trim();
       const descripcion = document.getElementById('prodDescripcionInput').value.trim();
       const categoria = document.getElementById('prodCategoriaInput').value;
@@ -215,14 +388,14 @@ document.addEventListener('DOMContentLoaded', function () {
       const stock = parseInt(document.getElementById('prodStockInput').value, 10);
 
       const idsError = ['errorProdNombre', 'errorProdDescripcion', 'errorProdCategoria', 'errorProdPrecio', 'errorProdStock'];
-      idsError.forEach(id => document.getElementById(id).textContent = '');
+      idsError.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '';
+      });
 
       let esValido = true;
 
-      if (nombre === '') {
-        document.getElementById('errorProdNombre').textContent = 'El nombre es obligatorio.';
-        esValido = false;
-      } else if (nombre.length < 3) {
+      if (nombre.length < 3) {
         document.getElementById('errorProdNombre').textContent = 'El nombre debe tener mínimo 3 caracteres.';
         esValido = false;
       }
@@ -237,51 +410,76 @@ document.addEventListener('DOMContentLoaded', function () {
         esValido = false;
       }
 
-      if (isNaN(precio) || precio <= 0) {
-        document.getElementById('errorProdPrecio').textContent = 'El precio debe ser mayor que 0.';
+      if (isNaN(precio) || precio < 0.10) {
+        document.getElementById('errorProdPrecio').textContent = 'El precio debe ser de al menos S/ 0.10.';
         esValido = false;
       }
 
       if (isNaN(stock) || stock < 0 || !Number.isInteger(stock)) {
-        document.getElementById('errorProdStock').textContent = 'El stock debe ser un número entero mayor o igual a 0.';
+        document.getElementById('errorProdStock').textContent = 'El stock debe ser un entero mayor o igual a 0.';
         esValido = false;
       }
 
       if (!esValido) return;
 
-      let productos = EH.storage.obtener('eh_productos', []);
+      btnSubmit.disabled = true;
+      btnSubmit.textContent = 'Guardando producto...';
 
-      if (editandoId) {
-        const producto = productos.find(p => p.id === editandoId);
-        producto.nombre = nombre;
-        producto.descripcion = descripcion;
-        producto.categoria = categoria;
-        producto.precio = precio;
-        producto.stock = stock;
-        EH.toast('Producto actualizado correctamente.');
-      } else {
-        productos.push({
-          id: EH.generarId(),
-          emprendimientoId: miEmp.id,
-          nombre, descripcion, categoria, precio, stock, imagen: ''
-        });
-        EH.toast('Producto agregado correctamente.');
+      try {
+        let productoResultado = null;
+
+        if (editandoId) {
+          productoResultado = await EH.client.products.update(editandoId, {
+            name: nombre,
+            description: descripcion,
+            price: precio,
+            stock: stock
+          });
+          EH.toast('Producto actualizado correctamente.');
+        } else {
+          // Crear nuevo producto (sujeto a límite de 20 por el trigger de plan free)
+          productoResultado = await EH.client.products.create({
+            business_id: miEmp.id,
+            name: nombre,
+            description: descripcion,
+            price: precio,
+            stock: stock,
+            is_active: true
+          });
+          EH.toast('Producto agregado correctamente.');
+        }
+
+        // Subir foto si se seleccionó archivo
+        if (fotoProductoSeleccionada && productoResultado) {
+          btnSubmit.textContent = 'Subiendo imagen a Storage...';
+          await EH.client.storage.uploadProductImage(
+            fotoProductoSeleccionada,
+            miEmp.id,
+            productoResultado.id || editandoId
+          );
+        }
+
+        limpiarFormularioProducto();
+        await pintarProductos();
+
+      } catch (err) {
+        console.error(err);
+        alert('Error: ' + (err.message || 'No se pudo guardar el producto.'));
+      } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = editandoId ? 'Guardar cambios' : 'Agregar producto';
       }
-
-      EH.storage.guardar('eh_productos', productos);
-      limpiarFormularioProducto();
-      pintarProductos();
     });
 
-    pintarProductos();
+    await pintarProductos();
   }
 
   /* ==========================================================================
-     D) PEDIDOS DEL EMPRENDEDOR (pedidos.html)
+     D) GESTIÓN DE PEDIDOS RECIBIDOS (pedidos.html)
      ========================================================================== */
   const listaPedidosAdmin = document.getElementById('listaPedidosAdmin');
   if (listaPedidosAdmin) {
-    const miEmp = obtenerMiEmprendimiento(sesion.correo);
+    const miEmp = await obtenerMiEmprendimiento();
 
     if (!miEmp) {
       document.getElementById('avisoCrearEmprendimientoPedidos').classList.remove('oculto');
@@ -290,46 +488,78 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const ESTADOS = ['Pendiente', 'En preparación', 'En camino', 'Entregado', 'Cancelado'];
 
-    function pintarPedidos() {
-      const pedidos = EH.storage.obtener('eh_pedidos', []).filter(p => p.emprendimientoId === miEmp.id);
+    async function pintarPedidos() {
+      listaPedidosAdmin.innerHTML = '<div class="estado-cargando"><div class="spinner"></div><p>Cargando pedidos recibidos...</p></div>';
 
-      if (pedidos.length === 0) {
-        listaPedidosAdmin.innerHTML = '<div class="estado-vacio"><p>Todavía no recibiste pedidos.</p></div>';
-        return;
-      }
+      try {
+        const pedidos = await EH.client.orders.getByBusiness(miEmp.id);
 
-      // Mostramos los más recientes primero.
-      listaPedidosAdmin.innerHTML = pedidos.slice().reverse().map(p => `
-        <div class="pedido-admin">
-          <div class="pedido-admin__top">
-            <span class="pedido-admin__numero">Pedido ${p.numero}</span>
-            <select class="estado-select" data-numero="${p.numero}">
-              ${ESTADOS.map(e => `<option value="${e}" ${e === p.estado ? 'selected' : ''}>${e}</option>`).join('')}
-            </select>
-          </div>
-          <ul class="pedido-admin__lista">
-            ${p.productos.map(pr => `<li>${pr.cantidad} × ${pr.nombre} — S/ ${(pr.precio * pr.cantidad).toFixed(2)}</li>`).join('')}
-          </ul>
-          <div class="pedido-admin__datos">
-            <div><strong>Cliente:</strong> ${p.clienteNombre} (${p.clienteCorreo})</div>
-            <div><strong>Dirección:</strong> ${p.direccion} · <strong>Pago:</strong> ${p.metodoPago}</div>
-            <div><strong>Total:</strong> S/ ${p.total.toFixed(2)} · ${p.fecha}</div>
-          </div>
-        </div>
-      `).join('');
+        if (!pedidos || pedidos.length === 0) {
+          listaPedidosAdmin.innerHTML = '<div class="estado-vacio"><div class="estado-vacio__icono">🧾</div><p>Todavía no has recibido ningún pedido.</p></div>';
+          return;
+        }
 
-      listaPedidosAdmin.querySelectorAll('.estado-select').forEach(select => {
-        select.addEventListener('change', function () {
-          const todos = EH.storage.obtener('eh_pedidos', []);
-          const pedido = todos.find(p => p.numero === select.dataset.numero);
-          pedido.estado = select.value;
-          EH.storage.guardar('eh_pedidos', todos);
-          EH.toast('Estado del pedido actualizado.');
+        listaPedidosAdmin.innerHTML = pedidos.map(p => {
+          const numero = p.order_number || p.numero || 'EH-0000';
+          const fecha = p.created_at ? new Date(p.created_at).toLocaleString('es-PE') : (p.fecha || 'Reciente');
+          const estadoActual = p.status || p.estado || 'Pendiente';
+          const total = Number(p.total_amount || p.total || 0).toFixed(2);
+          const items = p.items || p.productos || [];
+
+          return `
+            <div class="pedido-admin">
+              <div class="pedido-admin__top" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                <span class="pedido-admin__numero">Pedido ${EH.escapeHtml(numero)} · <small>${EH.escapeHtml(fecha)}</small></span>
+                <div>
+                  <label style="font-size:0.85rem; font-weight:600; margin-right:6px;">Estado:</label>
+                  <select class="estado-select" data-id="${EH.escapeHtml(p.id || numero)}" aria-label="Cambiar estado del pedido">
+                    ${ESTADOS.map(e => `<option value="${e}" ${e === estadoActual ? 'selected' : ''}>${e}</option>`).join('')}
+                  </select>
+                </div>
+              </div>
+              <ul class="pedido-admin__lista" style="margin:12px 0;">
+                ${items.map(pr => `
+                  <li>
+                    <strong>${pr.quantity || pr.cantidad} × ${EH.escapeHtml(pr.product_name || pr.nombre)}</strong>
+                    — S/ ${Number(pr.subtotal || (pr.unit_price * pr.quantity) || 0).toFixed(2)}
+                  </li>
+                `).join('')}
+              </ul>
+              <div class="pedido-admin__datos" style="background:#f9fafb; padding:10px; border-radius:6px; font-size:0.9rem;">
+                <div><strong>Cliente:</strong> ${EH.escapeHtml(p.customer_name || p.clienteNombre || 'Cliente')} (${EH.escapeHtml(p.customer_phone || p.telefono || 'Sin teléfono')})</div>
+                <div><strong>Entrega:</strong> ${EH.escapeHtml(p.delivery_address || p.direccion || '')}</div>
+                <div><strong>Método de pago:</strong> ${EH.escapeHtml(p.payment_method || p.metodoPago || 'Coordinado')} | <strong style="color:var(--color-azul);">Total: S/ ${total}</strong></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // Evento de cambio de estado de pedido
+        listaPedidosAdmin.querySelectorAll('.estado-select').forEach(select => {
+          select.addEventListener('change', async function () {
+            const pedidoId = select.dataset.id;
+            const nuevoEstado = select.value;
+            select.disabled = true;
+
+            try {
+              await EH.client.orders.updateStatus(pedidoId, nuevoEstado);
+              EH.toast(`Estado del pedido cambiado a "${nuevoEstado}".`);
+            } catch (err) {
+              console.error(err);
+              EH.toast('Error al actualizar el estado del pedido.');
+            } finally {
+              select.disabled = false;
+            }
+          });
         });
-      });
+
+      } catch (err) {
+        console.error(err);
+        listaPedidosAdmin.innerHTML = '<div class="estado-vacio"><p>Error al cargar pedidos.</p></div>';
+      }
     }
 
-    pintarPedidos();
+    await pintarPedidos();
   }
 
 });

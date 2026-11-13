@@ -1,32 +1,35 @@
 /* ==========================================================================
    EmpreHub - style.css
-   Hoja de estilos GENERAL del proyecto.
-   Aquí van: variables de color, reset básico, tipografía, botones y
-   utilidades responsive que se reutilizan en TODAS las páginas.
-   Cada pantalla tiene además su propio CSS (login.css, inicio.css, etc.)
+   Hoja de estilos general unificada, accesible y responsive.
+   Sistema de diseño coherente basado en la tipografía Inter y WCAG AA.
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
-   1) VARIABLES DE COLOR (paleta oficial de EmpreHub)
-   Usamos variables CSS (--nombre) para no repetir códigos de color y para
-   poder cambiar el tema del proyecto desde un solo lugar.
+   1) VARIABLES DE SISTEMA DE DISEÑO (Paleta oficial y accesible)
    -------------------------------------------------------------------------- */
 :root {
-  --color-azul: #2F80D1;
-  --color-verde: #55B94A;
-  --color-verde-claro: #DFF3D8;
-  --color-celeste-claro: #EAF6FF;
-  --color-amarillo: #FFD34E;
-  --color-rosado: #F29AB2;
+  --color-azul: #2563EB;
+  --color-azul-hover: #1D4ED8;
+  --color-verde: #16A34A;
+  --color-verde-oscuro: #15803D;
+  --color-verde-claro: #DCFCE7;
+  --color-celeste-claro: #F0F9FF;
+  --color-amarillo: #D97706;
+  --color-rosado: #E11D48;
   --color-blanco: #FFFFFF;
-  --color-gris-oscuro: #333333;
+  --color-gris-oscuro: #1E293B;
+  --color-gris-medio: #475569;
+  --color-gris-borde: #E2E8F0;
+  --color-fondo: #F8FAFC;
 
-  /* Sombras y bordes reutilizables */
-  --sombra-suave: 0 4px 14px rgba(47, 128, 209, 0.15);
-  --borde-radius: 16px;
-  --borde-radius-chico: 10px;
+  /* Sombras y elevaciones */
+  --sombra-suave: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --sombra-hover: 0 10px 20px rgba(15, 23, 42, 0.12);
+  --borde-radius: 14px;
+  --borde-radius-chico: 8px;
 
-  /* Espaciados reutilizables */
+  /* Espaciados */
+  --espacio-xs: 4px;
   --espacio-sm: 8px;
   --espacio-md: 16px;
   --espacio-lg: 24px;
@@ -34,14 +37,12 @@
 }
 
 /* --------------------------------------------------------------------------
-   2) RESET BÁSICO
-   Quitamos márgenes/paddings por defecto del navegador para tener un
-   punto de partida limpio e igual en todos los navegadores.
+   2) RESET BÁSICO Y TIPOGRAFÍA
    -------------------------------------------------------------------------- */
 * {
   margin: 0;
   padding: 0;
-  box-sizing: border-box; /* el padding y el borde no aumentan el ancho total */
+  box-sizing: border-box;
 }
 
 html {
@@ -49,21 +50,24 @@ html {
 }
 
 body {
-  font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   color: var(--color-gris-oscuro);
-  background-color: var(--color-celeste-claro);
-  line-height: 1.5;
+  background-color: var(--color-fondo);
+  line-height: 1.6;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
 img {
   max-width: 100%;
+  height: auto;
   display: block;
 }
 
 a {
   text-decoration: none;
   color: inherit;
+  transition: color 0.15s ease;
 }
 
 ul {
@@ -78,51 +82,63 @@ button {
 
 input, select, textarea {
   font-family: inherit;
+  font-size: 1rem;
 }
 
-/* --------------------------------------------------------------------------
-   3) TIPOGRAFÍA GENERAL
-   -------------------------------------------------------------------------- */
-h1, h2, h3 {
+h1, h2, h3, h4 {
   font-weight: 700;
   color: var(--color-gris-oscuro);
+  line-height: 1.25;
 }
 
 p {
-  color: #555;
+  color: var(--color-gris-medio);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* --------------------------------------------------------------------------
-   4) CONTENEDOR GENERAL
-   Clase reutilizable para centrar el contenido y darle un ancho máximo.
+   3) CONTENEDOR GENERAL
    -------------------------------------------------------------------------- */
 .contenedor {
   width: 100%;
-  max-width: 1100px;
+  max-width: 1160px;
   margin: 0 auto;
   padding: 0 var(--espacio-md);
 }
 
 /* --------------------------------------------------------------------------
-   5) BOTONES REUTILIZABLES
-   .btn es la base; se combina con .btn-primario, .btn-secundario, etc.
+   4) BOTONES REUTILIZABLES (Contraste verificado)
    -------------------------------------------------------------------------- */
 .btn {
-  display: inline-block;
-  padding: 14px 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
   border-radius: var(--borde-radius-chico);
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, opacity 0.15s ease;
   text-align: center;
 }
 
-.btn:hover {
+.btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: var(--sombra-suave);
 }
 
-.btn:active {
+.btn:active:not(:disabled) {
   transform: translateY(0);
 }
 
@@ -130,151 +146,153 @@ p {
   background-color: var(--color-azul);
   color: var(--color-blanco);
 }
+.btn-primario:hover:not(:disabled) {
+  background-color: var(--color-azul-hover);
+}
 
 .btn-secundario {
-  background-color: var(--color-verde);
+  background-color: var(--color-verde-oscuro);
   color: var(--color-blanco);
+}
+.btn-secundario:hover:not(:disabled) {
+  background-color: var(--color-verde);
 }
 
 .btn-alerta {
-  background-color: #E85D5D;
+  background-color: #DC2626;
   color: var(--color-blanco);
+}
+.btn-alerta:hover:not(:disabled) {
+  background-color: #B91C1C;
 }
 
 .btn-bloque {
-  display: block;
+  display: flex;
   width: 100%;
 }
 
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
   transform: none;
 }
 
 /* --------------------------------------------------------------------------
-   6) TARJETAS (card) - se usan en emprendimientos, productos, pedidos, etc.
+   5) TARJETAS Y FOTOGRAFÍAS REALES
    -------------------------------------------------------------------------- */
 .card {
   background-color: var(--color-blanco);
   border-radius: var(--borde-radius);
   box-shadow: var(--sombra-suave);
+  border: 1px solid var(--color-gris-borde);
   overflow: hidden;
-  transition: transform 0.15s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .card:hover {
   transform: translateY(-4px);
+  box-shadow: var(--sombra-hover);
+}
+
+.tarjeta-emprendimiento__foto,
+.tarjeta-producto__foto {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  background-color: #F1F5F9;
+}
+
+.tarjeta-emprendimiento__imagen,
+.tarjeta-producto__imagen {
+  width: 100%;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3.5rem;
+  background: linear-gradient(135deg, var(--color-celeste-claro) 0%, #E2E8F0 100%);
+}
+
+.chip-categoria {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background-color: var(--color-celeste-claro);
+  color: var(--color-azul);
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-bottom: 8px;
 }
 
 /* --------------------------------------------------------------------------
-   7) MENSAJES DE ÉXITO / ERROR (usados en formularios de todo el proyecto)
+   6) MENSAJES Y VALIDACIONES
    -------------------------------------------------------------------------- */
 .mensaje {
-  padding: 10px 14px;
+  padding: 12px 16px;
   border-radius: var(--borde-radius-chico);
   font-size: 0.9rem;
   margin-top: var(--espacio-sm);
+  line-height: 1.5;
 }
 
 .mensaje-error {
-  background-color: #FDEAEA;
-  color: #C0392B;
-  border: 1px solid #F5B7B1;
+  background-color: #FEF2F2;
+  color: #991B1B;
+  border: 1px solid #FCA5A5;
 }
 
 .mensaje-exito {
   background-color: var(--color-verde-claro);
-  color: #2E7D32;
-  border: 1px solid var(--color-verde);
+  color: #14532D;
+  border: 1px solid #86EFAC;
 }
 
-/* Texto de error pequeño debajo de un campo específico del formulario */
 .error-campo {
   display: block;
-  color: #C0392B;
+  color: #DC2626;
   font-size: 0.8rem;
+  font-weight: 500;
   margin-top: 4px;
-  min-height: 16px; /* reserva espacio para que el formulario no "salte" */
+  min-height: 18px;
 }
 
 /* --------------------------------------------------------------------------
-   8) UTILIDADES GENERALES
+   7) ESTADOS DE CARGA Y SPINNER
    -------------------------------------------------------------------------- */
-.oculto {
-  display: none !important;
-}
-
-.texto-centro {
-  text-align: center;
-}
-
-.flex {
-  display: flex;
-  align-items: center;
-}
-
-.flex-columna {
-  display: flex;
-  flex-direction: column;
-}
-
-.espacio-entre {
-  justify-content: space-between;
-}
-
-/* --------------------------------------------------------------------------
-   10) PANTALLA DE BIENVENIDA (index.html)
-   Como la bienvenida no tiene un CSS propio en la estructura del proyecto,
-   sus estilos viven aquí, en el CSS general.
-   -------------------------------------------------------------------------- */
-.bienvenida {
-  min-height: 100vh;
+.estado-cargando {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  text-align: center;
   padding: var(--espacio-xl) var(--espacio-md);
-  background: linear-gradient(180deg, var(--color-celeste-claro) 0%, var(--color-blanco) 100%);
+  color: var(--color-gris-medio);
 }
 
-.bienvenida__logo {
-  width: 170px;
+.spinner {
+  width: 38px;
+  height: 38px;
+  border: 3px solid #E2E8F0;
+  border-top-color: var(--color-azul);
+  border-radius: 50%;
+  animation: girar 0.8s linear infinite;
   margin-bottom: var(--espacio-sm);
 }
 
-.bienvenida__eslogan {
-  font-size: 1.6rem;
-  color: var(--color-azul);
-  max-width: 480px;
-  margin-bottom: var(--espacio-sm);
+@keyframes girar {
+  to { transform: rotate(360deg); }
 }
 
-.bienvenida__frase {
-  font-size: 1rem;
-  color: #555;
-  max-width: 420px;
-  margin-bottom: var(--espacio-lg);
-}
-
-.bienvenida .btn {
-  font-size: 1.05rem;
-  padding: 16px 40px;
-}
-
-@media (max-width: 480px) {
-  .bienvenida__logo { width: 130px; }
-  .bienvenida__eslogan { font-size: 1.3rem; }
-  .bienvenida .btn { width: 100%; }
+.oculto {
+  display: none !important;
 }
 
 /* --------------------------------------------------------------------------
-   11) HEADER / NAV COMPARTIDO (pages de cliente y emprendedor)
+   8) HEADER / NAV
    -------------------------------------------------------------------------- */
 .header {
   background-color: var(--color-blanco);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+  border-bottom: 1px solid var(--color-gris-borde);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -287,14 +305,9 @@ p {
   padding: 12px var(--espacio-md);
 }
 
-.header__logo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .header__logo img {
   height: 42px;
+  width: auto;
 }
 
 .header__nav {
@@ -305,45 +318,34 @@ p {
 
 .header__nav a {
   font-weight: 600;
-  color: var(--color-gris-oscuro);
-  padding: 6px 4px;
-  position: relative;
+  color: var(--color-gris-medio);
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.header__nav a:hover {
+  color: var(--color-azul);
+  background-color: var(--color-celeste-claro);
 }
 
 .header__nav a.activo {
   color: var(--color-azul);
-  border-bottom: 3px solid var(--color-azul);
-}
-
-.header__icono {
-  position: relative;
-  font-size: 1.3rem;
-}
-
-.badge {
-  position: absolute;
-  top: -8px;
-  right: -10px;
-  background-color: var(--color-rosado);
-  color: var(--color-blanco);
-  font-size: 0.7rem;
+  background-color: var(--color-celeste-claro);
   font-weight: 700;
-  border-radius: 50%;
-  min-width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 4px;
 }
 
-/* Botón hamburguesa: solo visible en celular */
+.nav-badge-admin {
+  background: #FEF3C7 !important;
+  color: #92400E !important;
+  font-weight: 700 !important;
+}
+
 .header__hamburguesa {
   display: none;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
   background: none;
-  padding: 6px;
+  padding: 8px;
 }
 
 .header__hamburguesa span {
@@ -357,7 +359,6 @@ p {
   .header__hamburguesa {
     display: flex;
   }
-
   .header__nav {
     position: absolute;
     top: 100%;
@@ -365,20 +366,19 @@ p {
     right: 0;
     background-color: var(--color-blanco);
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     padding: var(--espacio-md);
-    gap: var(--espacio-md);
-    box-shadow: 0 6px 10px rgba(0,0,0,0.08);
+    gap: var(--espacio-sm);
+    box-shadow: var(--sombra-hover);
     display: none;
   }
-
   .header__nav.header__nav--abierto {
     display: flex;
   }
 }
 
 /* --------------------------------------------------------------------------
-   12) TOASTS (indicador flotante, ej: "Producto agregado al carrito")
+   9) TOASTS
    -------------------------------------------------------------------------- */
 .toast {
   position: fixed;
@@ -387,13 +387,15 @@ p {
   transform: translateX(-50%) translateY(20px);
   background-color: var(--color-gris-oscuro);
   color: var(--color-blanco);
-  padding: 12px 22px;
+  padding: 12px 24px;
   border-radius: var(--borde-radius-chico);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
+  font-weight: 500;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s ease, transform 0.25s ease;
-  z-index: 999;
+  z-index: 9999;
+  box-shadow: var(--sombra-hover);
 }
 
 .toast.toast--visible {
@@ -402,31 +404,34 @@ p {
 }
 
 /* --------------------------------------------------------------------------
-   13) MODAL DE CONFIRMACIÓN (ej: eliminar producto)
+   10) MODAL ACCESIBLE
    -------------------------------------------------------------------------- */
 .modal-fondo {
   position: fixed;
   inset: 0;
-  background-color: rgba(0,0,0,0.45);
+  background-color: rgba(15, 23, 42, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--espacio-md);
   z-index: 1000;
+  backdrop-filter: blur(2px);
 }
 
 .modal {
   background-color: var(--color-blanco);
   border-radius: var(--borde-radius);
   padding: var(--espacio-lg);
-  max-width: 360px;
+  max-width: 400px;
   width: 100%;
   text-align: center;
+  box-shadow: var(--sombra-hover);
 }
 
 .modal p {
-  margin: var(--espacio-md) 0 var(--espacio-lg);
+  margin: var(--espacio-sm) 0 var(--espacio-lg);
   color: var(--color-gris-oscuro);
+  font-size: 1rem;
 }
 
 .modal__acciones {
@@ -439,26 +444,80 @@ p {
 }
 
 /* --------------------------------------------------------------------------
-   14) ESTADO VACÍO (ej: "Tu carrito está vacío")
+   11) PANTALLA DE BIENVENIDA
+   -------------------------------------------------------------------------- */
+.bienvenida {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--espacio-xl) var(--espacio-md);
+  background: linear-gradient(180deg, var(--color-celeste-claro) 0%, var(--color-fondo) 100%);
+}
+
+.bienvenida__logo {
+  width: 170px;
+  height: auto;
+  margin-bottom: var(--espacio-sm);
+}
+
+.bienvenida__eslogan {
+  font-size: 1.8rem;
+  color: var(--color-azul);
+  max-width: 560px;
+  margin-bottom: var(--espacio-sm);
+}
+
+.bienvenida__frase {
+  font-size: 1.05rem;
+  color: var(--color-gris-medio);
+  max-width: 500px;
+  margin-bottom: var(--espacio-lg);
+}
+
+/* --------------------------------------------------------------------------
+   12) ESTADO VACÍO
    -------------------------------------------------------------------------- */
 .estado-vacio {
   text-align: center;
   padding: var(--espacio-xl) var(--espacio-md);
-  color: #777;
+  color: var(--color-gris-medio);
 }
 
 .estado-vacio__icono {
-  font-size: 2.5rem;
+  font-size: 3rem;
   margin-bottom: var(--espacio-sm);
 }
 
 /* --------------------------------------------------------------------------
-   15) RESPONSIVE - reglas generales
-   Cada CSS específico agrega sus propias media queries; aquí solo van
-   ajustes generales de espaciado en pantallas chicas.
+   13) PRODUCTO AGOTADO
    -------------------------------------------------------------------------- */
-@media (max-width: 768px) {
-  .contenedor {
-    padding: 0 var(--espacio-sm);
-  }
+.tarjeta-producto--agotado {
+  opacity: 0.65;
+  pointer-events: none;
+  position: relative;
+}
+
+.tarjeta-producto--agotado::after {
+  content: 'AGOTADO';
+  position: absolute;
+  top: var(--espacio-sm);
+  right: var(--espacio-sm);
+  background-color: var(--color-rosado);
+  color: var(--color-blanco);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: var(--borde-radius-chico);
+}
+
+/* Permitir ver pero no agregar al carrito */
+.tarjeta-producto--agotado .btn {
+  background-color: var(--color-gris-borde);
+  color: var(--color-gris-medio);
+  cursor: not-allowed;
+  pointer-events: none;
 }

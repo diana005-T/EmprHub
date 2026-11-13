@@ -1,207 +1,151 @@
 /* ==========================================================================
    EmpreHub - carrito.js
-   Maneja el carrito de compras de cada cliente.
-   Se guarda en localStorage bajo la clave "eh_carrito" como un array de:
-     { correo: 'cliente@correo.com', productoId: 'abc123', cantidad: 2 }
+   Manejo del Carrito de Compras y Flujo de Pedido Transaccional.
+   Integrado con PostgreSQL, RPC create_order_atomic y RLS.
    ========================================================================== */
 
-EH.carrito = {
-
-  // Devuelve TODOS los ítems de carrito guardados (de todos los clientes).
-  _todos() {
-    return EH.storage.obtener('eh_carrito', []);
-  },
-
-  // Devuelve los ítems del carrito de UN cliente, ya combinados con los
-  // datos del producto (nombre, precio, stock, etc.) para poder mostrarlos.
-  obtener(correo) {
-    const items = EH.carrito._todos().filter(i => i.correo === correo);
-    const productos = EH.storage.obtener('eh_productos', []);
-
-    return items.map(item => {
-      const producto = productos.find(p => p.id === item.productoId);
-      return producto ? { ...producto, cantidad: item.cantidad } : null;
-    }).filter(Boolean); // quita productos que ya no existan
-  },
-
-  // Agrega una cantidad de un producto al carrito.
-  // Si el producto ya estaba, suma la cantidad (sin superar el stock).
-  agregar(correo, productoId, cantidad) {
-    const productos = EH.storage.obtener('eh_productos', []);
-    const producto = productos.find(p => p.id === productoId);
-    if (!producto) return { ok: false, mensaje: 'El producto ya no existe.' };
-
-    let items = EH.carrito._todos();
-    const item = items.find(i => i.correo === correo && i.productoId === productoId);
-    const cantidadActual = item ? item.cantidad : 0;
-    const nuevaCantidad = cantidadActual + cantidad;
-
-    // Validación: no superar el stock disponible.
-    if (nuevaCantidad > producto.stock) {
-      return { ok: false, mensaje: `Solo quedan ${producto.stock} unidades disponibles.` };
-    }
-
-    if (item) {
-      item.cantidad = nuevaCantidad;
-    } else {
-      items.push({ correo, productoId, cantidad });
-    }
-
-    EH.storage.guardar('eh_carrito', items);
-    return { ok: true };
-  },
-
-  // Cambia la cantidad exacta de un producto en el carrito (usado por + / -).
-  actualizarCantidad(correo, productoId, nuevaCantidad) {
-    const productos = EH.storage.obtener('eh_productos', []);
-    const producto = productos.find(p => p.id === productoId);
-    if (!producto) return { ok: false };
-
-    // Validación: no permitir menos de 1 (para eso existe "eliminar").
-    if (nuevaCantidad < 1) {
-      return { ok: false, mensaje: 'La cantidad mínima es 1.' };
-    }
-    // Validación: no superar el stock disponible.
-    if (nuevaCantidad > producto.stock) {
-      return { ok: false, mensaje: `Solo quedan ${producto.stock} unidades disponibles.` };
-    }
-
-    let items = EH.carrito._todos();
-    const item = items.find(i => i.correo === correo && i.productoId === productoId);
-    if (item) {
-      item.cantidad = nuevaCantidad;
-      EH.storage.guardar('eh_carrito', items);
-    }
-    return { ok: true };
-  },
-
-  // Elimina un producto del carrito de un cliente.
-  eliminar(correo, productoId) {
-    let items = EH.carrito._todos();
-    items = items.filter(i => !(i.correo === correo && i.productoId === productoId));
-    EH.storage.guardar('eh_carrito', items);
-  },
-
-  // Vacía por completo el carrito de un cliente (ej: después de un pedido).
-  vaciar(correo) {
-    let items = EH.carrito._todos();
-    items = items.filter(i => i.correo !== correo);
-    EH.storage.guardar('eh_carrito', items);
-  },
-
-  // Calcula el total en soles del carrito de un cliente.
-  total(correo) {
-    return EH.carrito.obtener(correo)
-      .reduce((suma, p) => suma + (p.precio * p.cantidad), 0);
-  },
-
-  // Cuenta cuántas unidades hay en total (para el número del badge del carrito).
-  contarItems(correo) {
-    return EH.carrito.obtener(correo)
-      .reduce((suma, p) => suma + p.cantidad, 0);
-  }
-};
-
-/* ==========================================================================
-   PANTALLA DEL CARRITO Y FLUJO DE PEDIDO (pages/carrito.html)
-   Tiene 3 pasos, cada uno es un <section> que se muestra/oculta:
-     1. #pasoCarrito   -> lista de productos, cantidades y total
-     2. #pasoCheckout  -> formulario de datos de entrega
-     3. #pasoResumen   -> resumen final + botón "Confirmar pedido"
-     4. #pasoExito     -> mensaje de pedido realizado
-   ========================================================================== */
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
   const pasoCarrito = document.getElementById('pasoCarrito');
-  if (!pasoCarrito) return; // esta página no es carrito.html
+  if (!pasoCarrito) return; // Si no es carrito.html, salir
 
-  if (!EH.protegerPagina('cliente', 'registro.html')) return;
+  // Proteger la pantalla: requiere sesión de cliente
+  const tieneAcceso = await EH.protegerPagina('customer', 'registro.html');
+  if (!tieneAcceso) return;
 
   const sesion = EH.sesion.obtener();
+  const userId = sesion.id || sesion.correo;
+
   const pasoCheckout = document.getElementById('pasoCheckout');
   const pasoResumen = document.getElementById('pasoResumen');
   const pasoExito = document.getElementById('pasoExito');
 
-  let datosEntrega = null; // guarda temporalmente nombre/telefono/dirección/pago
+  let datosEntrega = null; // Almacena temporalmente los datos validados del checkout
 
-  /* ------------------------------ PASO 1: CARRITO ------------------------------ */
-  function pintarCarrito() {
-    const items = EH.carrito.obtener(sesion.correo);
+  /* ------------------------------------------------------------------------
+     PASO 1: PINTAR EL CARRITO
+     ------------------------------------------------------------------------ */
+  async function pintarCarrito() {
     const contenedor = document.getElementById('listaCarrito');
     const contTotales = document.getElementById('carritoTotales');
 
-    if (items.length === 0) {
-      contenedor.innerHTML = `
-        <div class="estado-vacio">
-          <div class="estado-vacio__icono">🛒</div>
-          <p>Tu carrito está vacío.</p>
-        </div>`;
-      contTotales.classList.add('oculto');
-      return;
-    }
+    contenedor.innerHTML = `
+      <div class="estado-cargando">
+        <div class="spinner"></div>
+        <p>Cargando tu carrito...</p>
+      </div>`;
 
-    contTotales.classList.remove('oculto');
+    try {
+      const items = await EH.client.cart.get(userId);
 
-    contenedor.innerHTML = items.map(p => `
-      <div class="item-carrito">
-        <div class="item-carrito__info">
-          <h4>${p.nombre}</h4>
-          <span>S/ ${p.precio.toFixed(2)} c/u</span>
+      if (!items || items.length === 0) {
+        contenedor.innerHTML = `
+          <div class="estado-vacio">
+            <div class="estado-vacio__icono">🛒</div>
+            <p>Tu carrito está actualmente vacío.</p>
+            <a href="inicio.html" class="btn btn-primario" style="margin-top:16px;">Explorar productos</a>
+          </div>`;
+        contTotales.classList.add('oculto');
+        return;
+      }
+
+      contTotales.classList.remove('oculto');
+
+      const totalEstimado = items.reduce((s, p) => s + (Number(p.precio) * Number(p.cantidad)), 0);
+
+      contenedor.innerHTML = items.map(p => `
+        <div class="item-carrito">
+          <div class="item-carrito__info">
+            <h4>${EH.escapeHtml(p.nombre)}</h4>
+            <span style="font-size:0.85rem; color:#666;">Emprendimiento: ${EH.escapeHtml(p.nombreEmprendimiento || 'General')}</span>
+            <div style="font-weight:600; color:var(--color-azul); margin-top:4px;">S/ ${Number(p.precio).toFixed(2)} c/u</div>
+          </div>
+          <div class="item-carrito__cantidad">
+            <button data-accion="restar" data-id="${EH.escapeHtml(p.id)}" aria-label="Disminuir cantidad">−</button>
+            <span aria-label="Cantidad">${p.cantidad}</span>
+            <button data-accion="sumar" data-id="${EH.escapeHtml(p.id)}" aria-label="Aumentar cantidad">+</button>
+          </div>
+          <div class="item-carrito__subtotal">S/ ${(Number(p.precio) * p.cantidad).toFixed(2)}</div>
+          <button class="item-carrito__eliminar" data-accion="eliminar" data-id="${EH.escapeHtml(p.id)}" title="Eliminar producto" aria-label="Eliminar ${EH.escapeHtml(p.nombre)}">
+            🗑️
+          </button>
         </div>
-        <div class="item-carrito__cantidad">
-          <button data-accion="restar" data-id="${p.id}">−</button>
-          <span>${p.cantidad}</span>
-          <button data-accion="sumar" data-id="${p.id}">+</button>
-        </div>
-        <div class="item-carrito__subtotal">S/ ${(p.precio * p.cantidad).toFixed(2)}</div>
-        <button class="item-carrito__eliminar" data-accion="eliminar" data-id="${p.id}" title="Eliminar">🗑️</button>
-      </div>
-    `).join('');
+      `).join('');
 
-    document.getElementById('carritoTotal').textContent = 'S/ ' + EH.carrito.total(sesion.correo).toFixed(2);
+      document.getElementById('carritoTotal').textContent = 'S/ ' + totalEstimado.toFixed(2);
 
-    // Botones + / − / eliminar de cada línea
-    contenedor.querySelectorAll('button[data-accion]').forEach(btn => {
-      btn.addEventListener('click', async function () {
-        const id = btn.dataset.id;
-        const accion = btn.dataset.accion;
-        const item = items.find(p => p.id === id);
+      // Eventos de botones (+, -, eliminar)
+      contenedor.querySelectorAll('button[data-accion]').forEach(btn => {
+        btn.addEventListener('click', async function () {
+          const prodId = btn.dataset.id;
+          const accion = btn.dataset.accion;
+          const item = items.find(p => p.id === prodId);
+          if (!item) return;
 
-        if (accion === 'sumar') {
-          const r = EH.carrito.actualizarCantidad(sesion.correo, id, item.cantidad + 1);
-          if (!r.ok) EH.toast(r.mensaje);
-        } else if (accion === 'restar') {
-          if (item.cantidad <= 1) return; // para bajar de 1 se usa "eliminar"
-          EH.carrito.actualizarCantidad(sesion.correo, id, item.cantidad - 1);
-        } else if (accion === 'eliminar') {
-          const confirmado = await EH.confirmar('¿Eliminar este producto del carrito?');
-          if (!confirmado) return;
-          EH.carrito.eliminar(sesion.correo, id);
-        }
+          btn.disabled = true;
 
-        pintarCarrito();
-        EH.actualizarBadgeCarrito();
+          try {
+            if (accion === 'sumar') {
+              if (item.cantidad >= item.stock) {
+                EH.toast(`Stock máximo disponible alcanzado (${item.stock} unidades).`);
+                return;
+              }
+              await EH.client.cart.updateQuantity(userId, prodId, item.cantidad + 1);
+            } else if (accion === 'restar') {
+              if (item.cantidad <= 1) return;
+              await EH.client.cart.updateQuantity(userId, prodId, item.cantidad - 1);
+            } else if (accion === 'eliminar') {
+              const confirmado = await EH.confirmar('¿Deseas eliminar este producto de tu carrito?');
+              if (!confirmado) return;
+              await EH.client.cart.removeItem(userId, prodId);
+              EH.toast('Producto eliminado del carrito');
+            }
+            await pintarCarrito();
+            await EH.actualizarBadgeCarrito();
+          } catch (err) {
+            console.error(err);
+            EH.toast(err.message || 'Error al actualizar producto');
+          } finally {
+            btn.disabled = false;
+          }
+        });
       });
-    });
+
+    } catch (err) {
+      console.error('Error al pintar carrito:', err);
+      contenedor.innerHTML = '<div class="estado-vacio"><p>No se pudo cargar el carrito.</p></div>';
+    }
   }
 
+  // Vaciar carrito
   document.getElementById('btnVaciarCarrito').addEventListener('click', async function () {
-    const confirmado = await EH.confirmar('¿Vaciar todo el carrito?');
+    const confirmado = await EH.confirmar('¿Estás seguro de vaciar todos los productos del carrito?');
     if (!confirmado) return;
-    EH.carrito.vaciar(sesion.correo);
-    pintarCarrito();
-    EH.actualizarBadgeCarrito();
+    try {
+      await EH.client.cart.clear(userId);
+      await pintarCarrito();
+      await EH.actualizarBadgeCarrito();
+      EH.toast('Carrito vaciado.');
+    } catch (e) {
+      console.error(e);
+      EH.toast('No se pudo vaciar el carrito.');
+    }
   });
 
-  document.getElementById('btnIrCheckout').addEventListener('click', function () {
-    if (EH.carrito.obtener(sesion.correo).length === 0) {
+  // Ir al checkout
+  document.getElementById('btnIrCheckout').addEventListener('click', async function () {
+    const items = await EH.client.cart.get(userId);
+    if (!items || items.length === 0) {
       EH.toast('Tu carrito está vacío.');
       return;
     }
     pasoCarrito.classList.add('oculto');
     pasoCheckout.classList.remove('oculto');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
-  /* ------------------------------ PASO 2: CHECKOUT ------------------------------ */
+  /* ------------------------------------------------------------------------
+     PASO 2: FORMULARIO DE CHECKOUT
+     ------------------------------------------------------------------------ */
   document.getElementById('btnVolverCarrito').addEventListener('click', function () {
     pasoCheckout.classList.add('oculto');
     pasoCarrito.classList.remove('oculto');
@@ -216,7 +160,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const metodoPago = document.getElementById('checkoutMetodoPago').value;
 
     const idsError = ['errorCheckoutNombre', 'errorCheckoutTelefono', 'errorCheckoutDireccion', 'errorCheckoutMetodoPago'];
-    idsError.forEach(id => document.getElementById(id).textContent = '');
+    idsError.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '';
+    });
 
     let esValido = true;
 
@@ -232,17 +179,20 @@ document.addEventListener('DOMContentLoaded', function () {
       document.getElementById('errorCheckoutTelefono').textContent = 'El teléfono es obligatorio.';
       esValido = false;
     } else if (!/^[0-9]{9}$/.test(telefono)) {
-      document.getElementById('errorCheckoutTelefono').textContent = 'El teléfono debe tener solo números y 9 dígitos.';
+      document.getElementById('errorCheckoutTelefono').textContent = 'El teléfono debe tener exactamente 9 dígitos numéricos.';
       esValido = false;
     }
 
     if (direccion === '') {
-      document.getElementById('errorCheckoutDireccion').textContent = 'La dirección es obligatoria.';
+      document.getElementById('errorCheckoutDireccion').textContent = 'La dirección de entrega es obligatoria.';
+      esValido = false;
+    } else if (direccion.length < 5) {
+      document.getElementById('errorCheckoutDireccion').textContent = 'Ingresa una dirección completa y detallada.';
       esValido = false;
     }
 
     if (metodoPago === '') {
-      document.getElementById('errorCheckoutMetodoPago').textContent = 'Selecciona un método de pago.';
+      document.getElementById('errorCheckoutMetodoPago').textContent = 'Selecciona un método de pago coordinado.';
       esValido = false;
     }
 
@@ -252,20 +202,25 @@ document.addEventListener('DOMContentLoaded', function () {
     pintarResumen();
     pasoCheckout.classList.add('oculto');
     pasoResumen.classList.remove('oculto');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
-  /* ------------------------------ PASO 3: RESUMEN ------------------------------ */
-  function pintarResumen() {
-    const items = EH.carrito.obtener(sesion.correo);
+  /* ------------------------------------------------------------------------
+     PASO 3: RESUMEN Y CONFIRMACIÓN TRANSACCIONAL ATÓMICA
+     ------------------------------------------------------------------------ */
+  async function pintarResumen() {
+    const items = await EH.client.cart.get(userId);
+    const contProductos = document.getElementById('resumenProductos');
+    const totalEstimado = items.reduce((s, p) => s + (p.precio * p.cantidad), 0);
 
-    document.getElementById('resumenProductos').innerHTML = items.map(p => `
+    contProductos.innerHTML = items.map(p => `
       <div class="resumen-linea">
-        <span>${p.cantidad} × ${p.nombre}</span>
+        <span>${p.cantidad} × ${EH.escapeHtml(p.nombre)} <small>(${EH.escapeHtml(p.nombreEmprendimiento || 'Negocio')})</small></span>
         <span>S/ ${(p.precio * p.cantidad).toFixed(2)}</span>
       </div>
     `).join('');
 
-    document.getElementById('resumenTotal').textContent = 'S/ ' + EH.carrito.total(sesion.correo).toFixed(2);
+    document.getElementById('resumenTotal').textContent = 'S/ ' + totalEstimado.toFixed(2);
     document.getElementById('resumenNombre').textContent = datosEntrega.nombre;
     document.getElementById('resumenTelefono').textContent = datosEntrega.telefono;
     document.getElementById('resumenDireccion').textContent = datosEntrega.direccion;
@@ -277,59 +232,63 @@ document.addEventListener('DOMContentLoaded', function () {
     pasoCheckout.classList.remove('oculto');
   });
 
-  document.getElementById('btnConfirmarPedido').addEventListener('click', function () {
-    const items = EH.carrito.obtener(sesion.correo);
-    if (items.length === 0) return;
+  // BOTÓN CONFIRMAR PEDIDO -> Invoca la función RPC atómica de PostgreSQL
+  document.getElementById('btnConfirmarPedido').addEventListener('click', async function () {
+    const btn = document.getElementById('btnConfirmarPedido');
+    btn.disabled = true;
+    btn.textContent = 'Procesando pedido de forma segura...';
 
-    // Agrupamos los productos del carrito por emprendimiento: si el
-    // cliente compró de varios emprendimientos a la vez, se genera un
-    // pedido independiente para cada uno (cada emprendedor ve solo lo suyo).
-    const grupos = {};
-    items.forEach(p => {
-      if (!grupos[p.emprendimientoId]) grupos[p.emprendimientoId] = [];
-      grupos[p.emprendimientoId].push(p);
-    });
+    try {
+      const items = await EH.client.cart.get(userId);
+      if (!items || items.length === 0) {
+        EH.toast('Tu carrito está vacío.');
+        btn.disabled = false;
+        btn.textContent = 'Confirmar pedido';
+        return;
+      }
 
-    const pedidos = EH.storage.obtener('eh_pedidos', []);
-    let contador = EH.storage.obtener('eh_contador_pedido', 1000);
-    const numerosGenerados = [];
-
-    Object.keys(grupos).forEach(empId => {
-      contador += 1;
-      const numero = 'EH-' + contador;
-      numerosGenerados.push(numero);
-
-      const productosGrupo = grupos[empId];
-      const totalGrupo = productosGrupo.reduce((s, p) => s + p.precio * p.cantidad, 0);
-
-      pedidos.push({
-        numero,
-        emprendimientoId: empId,
-        clienteCorreo: sesion.correo,
-        clienteNombre: datosEntrega.nombre,
-        telefono: datosEntrega.telefono,
-        direccion: datosEntrega.direccion,
-        metodoPago: datosEntrega.metodoPago,
-        productos: productosGrupo.map(p => ({
-          productoId: p.id, nombre: p.nombre, cantidad: p.cantidad, precio: p.precio
-        })),
-        total: totalGrupo,
-        estado: 'Pendiente',
-        fecha: new Date().toLocaleString('es-PE')
+      // Agrupar productos por emprendimiento (un pedido atómico independiente por negocio)
+      const grupos = {};
+      items.forEach(p => {
+        const empId = p.emprendimientoId;
+        if (!grupos[empId]) grupos[empId] = [];
+        grupos[empId].push(p);
       });
-    });
 
-    EH.storage.guardar('eh_pedidos', pedidos);
-    EH.storage.guardar('eh_contador_pedido', contador);
+      const pedidosExitosos = [];
 
-    // Vaciamos el carrito y mostramos el mensaje de éxito.
-    EH.carrito.vaciar(sesion.correo);
-    EH.actualizarBadgeCarrito();
+      for (const empId of Object.keys(grupos)) {
+        const itemsGrupo = grupos[empId];
+        const res = await EH.client.orders.createAtomic({
+          businessId: empId,
+          customerName: datosEntrega.nombre,
+          customerPhone: datosEntrega.telefono,
+          deliveryAddress: datosEntrega.direccion,
+          paymentMethod: datosEntrega.metodoPago,
+          items: itemsGrupo.map(p => ({ productId: p.id, cantidad: p.cantidad })),
+          notes: 'Pedido realizado desde la web de EmpreHub'
+        });
 
-    document.getElementById('numeroPedidoExito').textContent = numerosGenerados.join(', ');
-    pasoResumen.classList.add('oculto');
-    pasoExito.classList.remove('oculto');
+        pedidosExitosos.push(res.order_number || res.numero || ('EH-' + Date.now().toString().slice(-4)));
+      }
+
+      // Vaciado automático del carrito
+      await EH.client.cart.clear(userId);
+      await EH.actualizarBadgeCarrito();
+
+      // Mostrar pantalla de éxito
+      document.getElementById('numeroPedidoExito').textContent = pedidosExitosos.join(', ');
+      pasoResumen.classList.add('oculto');
+      pasoExito.classList.remove('oculto');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    } catch (err) {
+      console.error('Error al confirmar pedido:', err);
+      alert('No se pudo completar el pedido: ' + (err.message || 'Error de servidor. Revisa el stock disponible.'));
+      btn.disabled = false;
+      btn.textContent = 'Confirmar pedido';
+    }
   });
 
-  pintarCarrito();
+  await pintarCarrito();
 });

@@ -3,7 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EmpreHub - Mis productos</title>
+  <title>EmpreHub - Mis Productos</title>
+
+  <!-- Google Font: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="../../css/style.css">
   <link rel="stylesheet" href="../../css/login.css">
@@ -13,56 +18,60 @@
 
   <header class="header">
     <div class="header__contenido contenedor">
-      <a href="panel.html" class="header__logo">
-        <img src="../../img/logo.png" alt="EmpreHub">
+      <a href="panel.html" class="header__logo" aria-label="Panel principal">
+        <img src="../../img/logo.png" alt="EmpreHub" height="42">
       </a>
-      <button class="header__hamburguesa" aria-label="Abrir menú">
+      <button class="header__hamburguesa" aria-label="Abrir menú" aria-expanded="false">
         <span></span><span></span><span></span>
       </button>
-      <nav class="header__nav">
-        <a href="../perfil.html">Perfil</a>
-        <button data-accion="cerrar-sesion" data-destino="../../index.html">Cerrar sesión</button>
+      <nav class="header__nav" aria-label="Navegación emprendedor">
+        <a href="../inicio.html">Ver catálogo</a>
+        <a href="../perfil.html">Mi Perfil</a>
+        <button data-accion="cerrar-sesion" data-destino="../../index.html" class="btn btn-alerta" style="padding:6px 14px; font-size:0.9rem;">Cerrar sesión</button>
       </nav>
     </div>
   </header>
 
-  <div class="panel">
-    <aside class="panel__menu">
+  <div class="panel contenedor" style="margin-top:var(--espacio-lg);">
+    <aside class="panel__menu" aria-label="Menú del panel">
       <a href="panel.html">🏠 Panel</a>
       <a href="mi-emprendimiento.html">🏪 Mi emprendimiento</a>
-      <a href="productos.html" class="activo">📦 Mis productos</a>
+      <a href="productos.html" class="activo" aria-current="page">📦 Mis productos</a>
       <a href="pedidos.html">🧾 Pedidos</a>
+      <a href="promociones.html">🎯 Promociones</a>
     </aside>
 
     <section class="panel__contenido">
 
-      <!-- Aviso si el emprendedor todavía no creó su emprendimiento -->
       <div id="avisoCrearEmprendimiento" class="mensaje mensaje-error oculto" style="margin-bottom: var(--espacio-lg);">
-        Antes de agregar productos, primero debes crear tu emprendimiento.
-        <a href="mi-emprendimiento.html" style="font-weight:700;">Crear ahora →</a>
+        Antes de agregar productos, primero debes registrar tu emprendimiento.
+        <a href="mi-emprendimiento.html" style="font-weight:700; text-decoration:underline;">Crear ahora →</a>
       </div>
 
       <div id="seccionProductos">
         <!-- Formulario para agregar/editar producto -->
         <div class="tarjeta-formulario" style="margin:0 0 var(--espacio-lg);">
-          <h2 id="tituloFormProducto">Agregar producto</h2>
+          <h2 id="tituloFormProducto">Agregar Producto</h2>
+          <p style="font-size:0.85rem; color:#666; margin-bottom:var(--espacio-md);">
+            Plan gratuito: Máximo 20 productos y 3 imágenes por producto.
+          </p>
 
           <form id="formProducto" novalidate>
             <div class="campo">
               <label for="prodNombreInput">Nombre del producto</label>
-              <input type="text" id="prodNombreInput" placeholder="Ej. Arroz con pollo">
+              <input type="text" id="prodNombreInput" placeholder="Ej. Arroz con pollo criollo" required>
               <span class="error-campo" id="errorProdNombre"></span>
             </div>
 
             <div class="campo">
-              <label for="prodDescripcionInput">Descripción</label>
-              <input type="text" id="prodDescripcionInput" placeholder="Breve descripción del producto">
+              <label for="prodDescripcionInput">Descripción detallada</label>
+              <input type="text" id="prodDescripcionInput" placeholder="Ingredientes, porciones o detalles clave" required>
               <span class="error-campo" id="errorProdDescripcion"></span>
             </div>
 
             <div class="campo">
               <label for="prodCategoriaInput">Categoría</label>
-              <select id="prodCategoriaInput">
+              <select id="prodCategoriaInput" required>
                 <option value="">Selecciona una categoría</option>
                 <option value="Platos">🍽️ Platos</option>
                 <option value="Bebidas">🥤 Bebidas</option>
@@ -73,14 +82,14 @@
             </div>
 
             <div class="campo">
-              <label for="prodPrecioInput">Precio (S/)</label>
-              <input type="number" id="prodPrecioInput" step="0.10" min="0.10" placeholder="Ej. 12.00">
+              <label for="prodPrecioInput">Precio en Soles (S/)</label>
+              <input type="number" id="prodPrecioInput" step="0.10" min="0.10" placeholder="Ej. 14.50" required>
               <span class="error-campo" id="errorProdPrecio"></span>
             </div>
 
             <div class="campo">
-              <label for="prodStockInput">Stock disponible</label>
-              <input type="number" id="prodStockInput" step="1" min="0" placeholder="Ej. 10">
+              <label for="prodStockInput">Stock disponible en unidades</label>
+              <input type="number" id="prodStockInput" step="1" min="0" placeholder="Ej. 15" required>
               <span class="error-campo" id="errorProdStock"></span>
             </div>
 
@@ -92,15 +101,19 @@
         </div>
 
         <!-- Listado de productos ya publicados -->
-        <h2 class="inicio__seccion-titulo">Mis productos publicados</h2>
-        <div class="lista-productos-admin" id="listaProductosAdmin"></div>
+        <h2 class="inicio__seccion-titulo">Mis Productos en Catálogo</h2>
+        <div class="lista-productos-admin" id="listaProductosAdmin" aria-live="polite"></div>
       </div>
 
     </section>
   </div>
 
-  <div id="toast" class="toast"></div>
+  <div id="toast" class="toast" role="alert" aria-live="polite"></div>
 
+  <!-- SDK Supabase y Módulos -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../../js/supabase-config.js"></script>
+  <script src="../../js/supabase-client.js"></script>
   <script src="../../js/app.js"></script>
   <script src="../../js/emprendedor.js"></script>
 </body>

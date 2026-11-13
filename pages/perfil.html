@@ -3,45 +3,268 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EmpreHub - Mi perfil</title>
+  <title>EmpreHub - Mi Perfil e Historial</title>
+
+  <!-- Google Font: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/inicio.css">
   <link rel="stylesheet" href="../css/login.css">
+  <style>
+    .perfil-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: var(--espacio-lg);
+      margin: var(--espacio-lg) auto;
+    }
+    @media (max-width: 850px) {
+      .perfil-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+    .pedido-card {
+      background: #fff;
+      border-radius: var(--borde-radius);
+      box-shadow: var(--sombra-suave);
+      padding: 16px;
+      margin-bottom: 16px;
+      border-left: 5px solid var(--color-azul);
+    }
+    .pedido-card--pendiente { border-left-color: var(--color-amarillo); }
+    .pedido-card--entregado { border-left-color: var(--color-verde); }
+    .pedido-card--cancelado { border-left-color: #E85D5D; }
+    .badge-estado {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+    .badge-estado--pendiente { background: #FFF3CD; color: #856404; }
+    .badge-estado--preparacion { background: #D1ECF1; color: #0C5460; }
+    .badge-estado--camino { background: #E2E3E5; color: #383D41; }
+    .badge-estado--entregado { background: #D4EDDA; color: #155724; }
+    .badge-estado--cancelado { background: #F8D7DA; color: #721C24; }
+  </style>
 </head>
 <body>
 
   <header class="header">
     <div class="header__contenido contenedor">
-      <a href="../index.html" class="header__logo">
-        <img src="../img/logo.png" alt="EmpreHub">
+      <a href="inicio.html" class="header__logo" aria-label="Ir al inicio">
+        <img src="../img/logo.png" alt="EmpreHub" height="42">
       </a>
-      <nav class="header__nav" style="display:flex; position:static; box-shadow:none; padding:0; flex-direction:row;">
-        <a id="perfilVolver" href="inicio.html">← Volver</a>
+      <button class="header__hamburguesa" aria-label="Abrir menú" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="header__nav" aria-label="Navegación principal">
+        <a href="inicio.html">Inicio</a>
+        <a href="favoritos.html">Favoritos</a>
+        <a href="carrito.html" class="header__icono" aria-label="Carrito">
+          🛒 Carrito <span id="badgeCarrito" class="badge oculto">0</span>
+        </a>
+        <a href="perfil.html" class="activo" aria-current="page">Perfil</a>
       </nav>
     </div>
   </header>
 
-  <main class="auth">
-    <div class="auth__tarjeta">
-      <h1 class="auth__titulo">Mi perfil</h1>
+  <main class="contenedor">
+    <div class="perfil-layout">
 
-      <div class="resumen-dato" style="padding:10px 0; border-bottom:1px solid #eee;">
-        <strong>Nombre</strong><span id="perfilNombre"></span>
-      </div>
-      <div class="resumen-dato" style="padding:10px 0; border-bottom:1px solid #eee;">
-        <strong>Correo</strong><span id="perfilCorreo"></span>
-      </div>
-      <div class="resumen-dato" style="padding:10px 0; margin-bottom:20px;">
-        <strong>Tipo de cuenta</strong><span id="perfilTipo"></span>
-      </div>
+      <!-- COLUMNA 1: DATOS DEL PERFIL -->
+      <aside>
+        <div class="auth__tarjeta" style="margin:0; width:100%; max-width:none;">
+          <h1 class="auth__titulo" style="font-size:1.3rem; text-align:left; margin-bottom:var(--espacio-md);">Mi Cuenta</h1>
 
-      <button class="btn btn-alerta btn-bloque" data-accion="cerrar-sesion" data-destino="../index.html">
-        Cerrar sesión
-      </button>
+          <div class="resumen-dato" style="padding:10px 0; border-bottom:1px solid #eee;">
+            <strong>Nombre:</strong>
+            <span id="perfilNombre">Cargando...</span>
+          </div>
+
+          <div class="resumen-dato" style="padding:10px 0; border-bottom:1px solid #eee;">
+            <strong>Correo:</strong>
+            <span id="perfilCorreo">Cargando...</span>
+          </div>
+
+          <div class="resumen-dato" style="padding:10px 0; border-bottom:1px solid #eee;">
+            <strong>Teléfono:</strong>
+            <span id="perfilTelefono">-</span>
+          </div>
+
+          <div class="resumen-dato" style="padding:10px 0; margin-bottom:var(--espacio-lg);">
+            <strong>Tipo de usuario:</strong>
+            <span id="perfilTipo" class="chip-categoria">Cargando...</span>
+          </div>
+
+          <button id="btnEditarPerfil" class="btn btn-secundario btn-bloque" style="margin-bottom:10px;" type="button">
+            Editar datos personales
+          </button>
+
+          <button class="btn btn-alerta btn-bloque" data-accion="cerrar-sesion" data-destino="../index.html" type="button">
+            Cerrar sesión
+          </button>
+        </div>
+      </aside>
+
+      <!-- COLUMNA 2: HISTORIAL DE PEDIDOS -->
+      <section>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--espacio-md); flex-wrap:wrap; gap:8px;">
+          <h2 class="inicio__seccion-titulo" style="margin:0;">Historial de Mis Pedidos</h2>
+          <span style="font-size:0.9rem; color:#666;">Seguimiento en tiempo real</span>
+        </div>
+
+        <div id="listaHistorialPedidos" aria-live="polite"></div>
+      </section>
+
     </div>
   </main>
 
+  <div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+  <!-- SDK Supabase y Módulos -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/supabase-config.js"></script>
+  <script src="../js/supabase-client.js"></script>
   <script src="../js/app.js"></script>
   <script src="../js/carrito.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const tieneSesion = await EH.protegerPagina(null, 'registro.html');
+      if (!tieneSesion) return;
+
+      const sesion = EH.sesion.obtener();
+      const userId = sesion.id || sesion.correo;
+
+      // Cargar datos de perfil
+      async function cargarPerfil() {
+        try {
+          let profile = null;
+          if (EH.client && EH.client.auth) {
+            profile = await EH.client.auth.getProfile(userId);
+          }
+
+          const nombre = profile ? profile.full_name : (sesion.nombre || 'Usuario');
+          const correo = profile ? profile.email : sesion.correo;
+          const telefono = profile ? (profile.phone || 'No registrado') : '-';
+          const role = profile ? profile.role : (sesion.tipo || 'customer');
+
+          document.getElementById('perfilNombre').textContent = nombre;
+          document.getElementById('perfilCorreo').textContent = correo;
+          document.getElementById('perfilTelefono').textContent = telefono;
+
+          let roleTexto = 'Cliente';
+          if (role === 'entrepreneur' || role === 'emprendedor') roleTexto = 'Emprendedor';
+          if (role === 'admin') roleTexto = 'Administrador';
+          document.getElementById('perfilTipo').textContent = roleTexto;
+
+          // Evento de edición de perfil
+          const btnEditar = document.getElementById('btnEditarPerfil');
+          if (btnEditar) {
+            btnEditar.onclick = async () => {
+              const nuevoNombre = prompt('Ingresa tu nombre completo:', nombre);
+              if (nuevoNombre === null) return;
+              if (nuevoNombre.trim().length < 3) {
+                alert('El nombre debe tener al menos 3 caracteres.');
+                return;
+              }
+              const nuevoTelefono = prompt('Ingresa tu teléfono celular (9 dígitos):', telefono === 'No registrado' ? '' : telefono);
+              if (nuevoTelefono === null) return;
+
+              try {
+                await EH.client.auth.updateProfile(userId, {
+                  full_name: nuevoNombre.trim(),
+                  phone: nuevoTelefono.trim()
+                });
+                EH.toast('Perfil actualizado correctamente.');
+                await cargarPerfil();
+              } catch (e) {
+                console.error(e);
+                EH.toast('No se pudo actualizar el perfil.');
+              }
+            };
+          }
+        } catch (e) {
+          console.warn('Error cargando perfil:', e);
+        }
+      }
+
+      // Cargar historial de pedidos
+      async function cargarHistorial() {
+        const cont = document.getElementById('listaHistorialPedidos');
+        cont.innerHTML = '<div class="estado-cargando"><div class="spinner"></div><p>Cargando tus pedidos...</p></div>';
+
+        try {
+          let pedidos = [];
+          if (EH.client && EH.client.orders) {
+            pedidos = await EH.client.orders.getByCustomer(userId);
+          }
+
+          if (!pedidos || pedidos.length === 0) {
+            cont.innerHTML = `
+              <div class="estado-vacio">
+                <div class="estado-vacio__icono">🧾</div>
+                <p>Todavía no has realizado ningún pedido en EmpreHub.</p>
+                <a href="inicio.html" class="btn btn-primario" style="margin-top:16px;">Ver catálogo disponible</a>
+              </div>`;
+            return;
+          }
+
+          cont.innerHTML = pedidos.map(p => {
+            const numero = p.order_number || p.numero || 'EH-0000';
+            const fecha = p.created_at ? new Date(p.created_at).toLocaleString('es-PE') : (p.fecha || 'Reciente');
+            const negocio = (p.business && p.business.name) ? p.business.name : 'Emprendimiento';
+            const estado = p.status || p.estado || 'Pendiente';
+            const total = Number(p.total_amount || p.total || 0).toFixed(2);
+            const items = p.items || p.productos || [];
+
+            let badgeClase = 'badge-estado--pendiente';
+            let cardClase = 'pedido-card--pendiente';
+            if (estado === 'En preparación') { badgeClase = 'badge-estado--preparacion'; cardClase = ''; }
+            else if (estado === 'En camino') { badgeClase = 'badge-estado--camino'; cardClase = ''; }
+            else if (estado === 'Entregado') { badgeClase = 'badge-estado--entregado'; cardClase = 'pedido-card--entregado'; }
+            else if (estado === 'Cancelado') { badgeClase = 'badge-estado--cancelado'; cardClase = 'pedido-card--cancelado'; }
+
+            return `
+              <article class="pedido-card ${cardClase}">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                  <div>
+                    <strong style="font-size:1.1rem; color:var(--color-azul);">Pedido ${EH.escapeHtml(numero)}</strong>
+                    <div style="font-size:0.85rem; color:#666;">${EH.escapeHtml(fecha)} · 🏪 ${EH.escapeHtml(negocio)}</div>
+                  </div>
+                  <span class="badge-estado ${badgeClase}">${EH.escapeHtml(estado)}</span>
+                </div>
+
+                <div style="margin:12px 0; padding:10px 0; border-top:1px solid #f0f0f0; border-bottom:1px solid #f0f0f0;">
+                  <ul style="font-size:0.9rem; color:#444;">
+                    ${items.map(it => `
+                      <li style="margin-bottom:4px; display:flex; justify-content:space-between;">
+                        <span>${it.quantity || it.cantidad} × ${EH.escapeHtml(it.product_name || it.nombre)}</span>
+                        <span>S/ ${Number(it.subtotal || (it.unit_price * it.quantity) || 0).toFixed(2)}</span>
+                      </li>
+                    `).join('')}
+                  </ul>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#555; flex-wrap:wrap; gap:6px;">
+                  <div><strong>Pago:</strong> ${EH.escapeHtml(p.payment_method || p.metodoPago || 'Coordinado')} | <strong>Dirección:</strong> ${EH.escapeHtml(p.delivery_address || p.direccion || '')}</div>
+                  <div><strong style="color:var(--color-gris-oscuro); font-size:1rem;">Total: S/ ${total}</strong></div>
+                </div>
+              </article>
+            `;
+          }).join('');
+
+        } catch (err) {
+          console.error(err);
+          cont.innerHTML = '<div class="estado-vacio"><p>Error al cargar el historial de pedidos.</p></div>';
+        }
+      }
+
+      await cargarPerfil();
+      await cargarHistorial();
+    });
+  </script>
 </body>
 </html>
