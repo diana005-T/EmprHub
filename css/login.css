@@ -57,6 +57,11 @@
   margin-bottom: 4px;
 }
 
+.auth__tipo .icon {
+  width: 28px;
+  height: 28px;
+}
+
 .auth__tipo.auth__tipo--activo {
   border-color: var(--color-azul);
   background-color: var(--color-verde-claro);

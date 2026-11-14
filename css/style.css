@@ -209,8 +209,20 @@ p {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 3.5rem;
   background: linear-gradient(135deg, var(--color-celeste-claro) 0%, #E2E8F0 100%);
+}
+
+.tarjeta-emprendimiento__imagen .icon,
+.tarjeta-producto__imagen .icon {
+  width: 48px;
+  height: 48px;
+}
+
+.mensaje .icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  vertical-align: -4px;
 }
 
 .chip-categoria {
@@ -317,6 +329,9 @@ p {
 }
 
 .header__nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   font-weight: 600;
   color: var(--color-gris-medio);
   padding: 6px 8px;
@@ -381,6 +396,10 @@ p {
    9) TOASTS
    -------------------------------------------------------------------------- */
 .toast {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   position: fixed;
   bottom: 24px;
   left: 50%;
@@ -396,6 +415,25 @@ p {
   transition: opacity 0.25s ease, transform 0.25s ease;
   z-index: 9999;
   box-shadow: var(--sombra-hover);
+}
+
+.icon {
+  display: inline-block;
+  flex: 0 0 auto;
+  vertical-align: middle;
+}
+
+.icon-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  line-height: 1;
+}
+
+.toast .icon {
+  width: 18px;
+  height: 18px;
 }
 
 .toast.toast--visible {
@@ -487,8 +525,12 @@ p {
 }
 
 .estado-vacio__icono {
-  font-size: 3rem;
   margin-bottom: var(--espacio-sm);
+}
+
+.estado-vacio__icono .icon {
+  width: 48px;
+  height: 48px;
 }
 
 /* --------------------------------------------------------------------------

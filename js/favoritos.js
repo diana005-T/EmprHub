@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       if (!emprendimientos || emprendimientos.length === 0) {
         contenedor.innerHTML = `
           <div class="estado-vacio">
-            <div class="estado-vacio__icono">🤍</div>
+            <div class="estado-vacio__icono">${EH.icon('heart')}</div>
             <p>Todavía no tienes emprendimientos guardados en tus favoritos.</p>
             <a href="inicio.html" class="btn btn-primario" style="margin-top: 16px;">Explorar emprendimientos</a>
           </div>`;
@@ -39,10 +39,9 @@ document.addEventListener('DOMContentLoaded', async function () {
 
       contenedor.innerHTML = emprendimientos.map(emp => {
         const nombreCat = (emp.category && emp.category.name) ? emp.category.name : (emp.categoria || 'Emprendimiento');
-        const iconoCat = (emp.category && emp.category.icon) ? emp.category.icon : '🏪';
         const imagenHtml = emp.logo_url
           ? `<img src="${EH.escapeHtml(emp.logo_url)}" alt="${EH.escapeHtml(emp.name)}" class="tarjeta-emprendimiento__foto" loading="lazy">`
-          : `<div class="tarjeta-emprendimiento__imagen" aria-hidden="true">${iconoCat}</div>`;
+          : `<div class="tarjeta-emprendimiento__imagen" aria-hidden="true">${EH.categoryIcon(emp.category || nombreCat)}</div>`;
 
         return `
           <article class="card tarjeta-emprendimiento">
@@ -51,7 +50,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                     data-id="${EH.escapeHtml(emp.id)}" 
                     title="Quitar de favoritos"
                     aria-label="Quitar de favoritos a ${EH.escapeHtml(emp.name)}">
-              ❤️
+              ${EH.icon('heart')}
             </button>
             <div class="tarjeta-emprendimiento__info">
               <span class="chip-categoria">${EH.escapeHtml(nombreCat)}</span>

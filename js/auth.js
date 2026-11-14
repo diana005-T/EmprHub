@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (contenedorMensaje) {
           contenedorMensaje.innerHTML = `
             <div class="mensaje mensaje-exito" role="alert">
-              ✅ Cuenta creada exitosamente. ${EH.client.isLive ? 'Revisa tu correo si requiere confirmación o inicia sesión.' : 'Ya puedes iniciar sesión.'}
+              ${EH.icon('circle-check')} Cuenta creada exitosamente. ${EH.client.isLive ? 'Revisa tu correo si requiere confirmación o inicia sesión.' : 'Ya puedes iniciar sesión.'}
             </div>
           `;
         }
@@ -181,7 +181,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       } catch (err) {
         console.error('Error al registrarse:', err);
         if (contenedorMensaje) {
-          contenedorMensaje.innerHTML = `<div class="mensaje mensaje-error" role="alert">❌ ${EH.escapeHtml(err.message || 'No se pudo crear la cuenta.')}</div>`;
+          contenedorMensaje.innerHTML = `<div class="mensaje mensaje-error" role="alert">${EH.icon('circle-x')} ${EH.escapeHtml(err.message || 'No se pudo crear la cuenta.')}</div>`;
         }
       } finally {
         btnSubmit.disabled = false;
@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         EH.sesion.iniciar(correo, role, userId);
 
         if (contenedorMensaje) {
-          contenedorMensaje.innerHTML = '<div class="mensaje mensaje-exito" role="alert">✅ Ingreso correcto. Redirigiendo...</div>';
+          contenedorMensaje.innerHTML = `<div class="mensaje mensaje-exito" role="alert">${EH.icon('circle-check')} Ingreso correcto. Redirigiendo...</div>`;
         }
 
         setTimeout(() => {
@@ -257,7 +257,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         console.error('Error de login:', err);
         // Prevenir enumeración de correos mostrando mensaje genérico seguro
         if (contenedorMensaje) {
-          contenedorMensaje.innerHTML = '<div class="mensaje mensaje-error" role="alert">❌ Correo o contraseña incorrectos.</div>';
+          contenedorMensaje.innerHTML = `<div class="mensaje mensaje-error" role="alert">${EH.icon('circle-x')} Correo o contraseña incorrectos.</div>`;
         }
       } finally {
         btnSubmit.disabled = false;

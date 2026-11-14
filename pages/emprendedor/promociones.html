@@ -34,11 +34,11 @@
 
   <div class="panel contenedor" style="margin-top:var(--espacio-lg);">
     <aside class="panel__menu" aria-label="Menú del panel">
-      <a href="panel.html">🏠 Panel</a>
-      <a href="mi-emprendimiento.html">🏪 Mi emprendimiento</a>
-      <a href="productos.html">📦 Mis productos</a>
-      <a href="pedidos.html">🧾 Pedidos</a>
-      <a href="promociones.html" class="activo" aria-current="page">🎯 Promociones</a>
+      <a href="panel.html"><span data-lucide="layout-dashboard" class="icon-slot" aria-hidden="true"></span>Panel</a>
+      <a href="mi-emprendimiento.html"><span data-lucide="store" class="icon-slot" aria-hidden="true"></span>Mi emprendimiento</a>
+      <a href="productos.html"><span data-lucide="package" class="icon-slot" aria-hidden="true"></span>Mis productos</a>
+      <a href="pedidos.html"><span data-lucide="receipt" class="icon-slot" aria-hidden="true"></span>Pedidos</a>
+      <a href="promociones.html" class="activo" aria-current="page"><span data-lucide="tag" class="icon-slot" aria-hidden="true"></span>Promociones</a>
     </aside>
 
     <section class="panel__contenido">
@@ -102,7 +102,7 @@
         <!-- Lista de promociones existentes -->
         <div id="listaPromociones" aria-live="polite">
           <div class="estado-vacio">
-            <div class="estado-vacio__icono">🎯</div>
+            <div class="estado-vacio__icono"><span data-lucide="target" class="icon-slot" aria-hidden="true"></span></div>
             <p>Todavía no tienes promociones activas.<br>¡Crea una para atraer más clientes!</p>
           </div>
         </div>
@@ -122,4 +122,3 @@
   <script src="../../js/promociones.js"></script>
 </body>
 </html>
-

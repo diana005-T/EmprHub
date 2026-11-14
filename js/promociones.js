@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (!promos || promos.length === 0) {
       listaEl.innerHTML = `
         <div class="estado-vacio">
-          <div class="estado-vacio__icono">🎯</div>
+          <div class="estado-vacio__icono">${EH.icon('target')}</div>
           <p>Todavía no tienes promociones activas.<br>¡Crea una para atraer más clientes!</p>
         </div>`;
       return;
@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', async function () {
               style="padding:6px 14px; font-size:0.85rem; white-space:nowrap;"
               data-promo-id="${EH.escapeHtml(String(p.id))}"
               aria-label="Eliminar promoción ${EH.escapeHtml(p.title)}">
-              🗑 Eliminar
+              ${EH.icon('trash-2')} Eliminar
             </button>
           </div>
         </div>`;
@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', async function () {
   /* ---- Cargar y mostrar promociones ---- */
   async function cargarPromociones() {
     if (!miEmprendimiento) return;
-    listaEl.innerHTML = '<div class="estado-cargando" aria-label="Cargando…">⏳ Cargando promociones…</div>';
+    listaEl.innerHTML = `<div class="estado-cargando" aria-label="Cargando…">${EH.icon('clock-3')} Cargando promociones…</div>`;
     try {
       const promos = await EH.client.promotions.getByBusiness(miEmprendimiento.id);
       renderizarPromociones(promos);
@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       // Verificar límite plan gratuito
       const totalActivas = await verificarLimite();
       if (totalActivas >= LIMITE_GRATUITO) {
-        EH.toast(`⚠️ Límite del plan gratuito: solo puedes tener ${LIMITE_GRATUITO} promociones activas a la vez.`, 'advertencia');
+        EH.toast(`Límite del plan gratuito: solo puedes tener ${LIMITE_GRATUITO} promociones activas a la vez.`, 'advertencia');
         btnGuardar.disabled = false;
         btnGuardar.textContent = 'Publicar promoción';
         return;
@@ -171,11 +171,11 @@ document.addEventListener('DOMContentLoaded', async function () {
 
       await EH.client.promotions.create(datos);
 
-      EH.toast('✅ Promoción publicada exitosamente.', 'exito');
+      EH.toast('Promoción publicada exitosamente.', 'exito');
       formPromo.reset();
       await cargarPromociones();
     } catch (err) {
-      EH.toast(`❌ Error al publicar: ${EH.escapeHtml(err.message)}`, 'error');
+      EH.toast(`Error al publicar: ${err.message}`, 'error');
     } finally {
       btnGuardar.disabled = false;
       btnGuardar.textContent = 'Publicar promoción';
@@ -190,7 +190,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       EH.toast('Promoción eliminada.', 'info');
       await cargarPromociones();
     } catch (err) {
-      EH.toast(`❌ Error al eliminar: ${EH.escapeHtml(err.message)}`, 'error');
+      EH.toast(`Error al eliminar: ${err.message}`, 'error');
     }
   }
 
@@ -212,4 +212,3 @@ document.addEventListener('DOMContentLoaded', async function () {
 
   await cargarPromociones();
 });
-

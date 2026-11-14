@@ -29,21 +29,21 @@ document.addEventListener('DOMContentLoaded', async function () {
       } catch (e) {
         console.warn('Usando categorías por defecto:', e);
         categorias = [
-          { id: 'Platos', name: 'Platos', icon: '🍽️' },
-          { id: 'Bebidas', name: 'Bebidas', icon: '🥤' },
-          { id: 'Productos', name: 'Productos', icon: '🛍️' },
-          { id: 'Postres', name: 'Postres', icon: '🧁' }
+          { id: 'Platos', name: 'Platos' },
+          { id: 'Bebidas', name: 'Bebidas' },
+          { id: 'Productos', name: 'Productos' },
+          { id: 'Postres', name: 'Postres' }
         ];
       }
       pintarBotonesCategorias();
     }
 
     function pintarBotonesCategorias() {
-      let html = `<button class="categoria ${categoriaActivaId === 'Todas' ? 'categoria--activa' : ''}" data-id="Todas" type="button">✨ Todas</button>`;
+      let html = `<button class="categoria ${categoriaActivaId === 'Todas' ? 'categoria--activa' : ''}" data-id="Todas" type="button">${EH.icon('layout-dashboard')} Todas</button>`;
       categorias.forEach(cat => {
         const catId = cat.id || cat.name;
         const activa = (categoriaActivaId === catId || categoriaActivaId === cat.name) ? 'categoria--activa' : '';
-        html += `<button class="categoria ${activa}" data-id="${EH.escapeHtml(catId)}" type="button">${EH.escapeHtml(cat.icon || '📦')} ${EH.escapeHtml(cat.name)}</button>`;
+        html += `<button class="categoria ${activa}" data-id="${EH.escapeHtml(catId)}" type="button">${EH.categoryIcon(cat)} ${EH.escapeHtml(cat.name)}</button>`;
       });
       contenedorCategorias.innerHTML = html;
 
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (!lista || lista.length === 0) {
           contenedorEmprendimientos.innerHTML = `
             <div class="estado-vacio">
-              <div class="estado-vacio__icono">🔍</div>
+              <div class="estado-vacio__icono">${EH.icon('search')}</div>
               <p>No encontramos emprendimientos con los criterios seleccionados.</p>
             </div>`;
           return;
@@ -97,10 +97,9 @@ document.addEventListener('DOMContentLoaded', async function () {
         contenedorEmprendimientos.innerHTML = lista.map(emp => {
           const esFav = favoritosUsuario.includes(emp.id);
           const nombreCat = (emp.category && emp.category.name) ? emp.category.name : (emp.categoria || 'Emprendimiento');
-          const iconoCat = (emp.category && emp.category.icon) ? emp.category.icon : '🏪';
           const imagenHtml = emp.logo_url
             ? `<img src="${EH.escapeHtml(emp.logo_url)}" alt="${EH.escapeHtml(emp.name)}" class="tarjeta-emprendimiento__foto" loading="lazy">`
-            : `<div class="tarjeta-emprendimiento__imagen" aria-hidden="true">${iconoCat}</div>`;
+            : `<div class="tarjeta-emprendimiento__imagen" aria-hidden="true">${EH.categoryIcon(emp.category || nombreCat)}</div>`;
 
           return `
             <article class="card tarjeta-emprendimiento">
@@ -109,7 +108,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                       data-id="${EH.escapeHtml(emp.id)}" 
                       title="${esFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}"
                       aria-label="Favorito para ${EH.escapeHtml(emp.name)}">
-                ${esFav ? '❤️' : '🤍'}
+                ${EH.icon('heart')}
               </button>
               <div class="tarjeta-emprendimiento__info">
                 <span class="chip-categoria">${EH.escapeHtml(nombreCat)}</span>
@@ -128,7 +127,7 @@ document.addEventListener('DOMContentLoaded', async function () {
           btn.addEventListener('click', async function (e) {
             e.preventDefault();
             if (!sesion) {
-              EH.toast('Inicia sesión para guardar en favoritos ❤️');
+              EH.toast('Inicia sesión para guardar en favoritos');
               return;
             }
 
@@ -136,8 +135,8 @@ document.addEventListener('DOMContentLoaded', async function () {
             try {
               const ahoraEsFav = await EH.client.favorites.toggle(sesion.id || sesion.correo, id);
               btn.classList.toggle('tarjeta-emprendimiento__favorito--activo', ahoraEsFav);
-              btn.textContent = ahoraEsFav ? '❤️' : '🤍';
-              EH.toast(ahoraEsFav ? '❤️ Agregado a tus favoritos' : 'Quitado de tus favoritos');
+              btn.innerHTML = EH.icon('heart');
+              EH.toast(ahoraEsFav ? 'Agregado a tus favoritos' : 'Quitado de favoritos', ahoraEsFav ? 'favorito' : '');
             } catch (err) {
               console.error(err);
               EH.toast('No se pudo actualizar favoritos.');
@@ -224,7 +223,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       if (contPromos) {
         const promos = emprendimiento.promotions || [];
         if (promos.length > 0) {
-          contPromos.innerHTML = promos.map(p => `<li>🏷️ ${EH.escapeHtml(p.title || p)}</li>`).join('');
+          contPromos.innerHTML = promos.map(p => `<li>${EH.icon('tag')} ${EH.escapeHtml(p.title || p)}</li>`).join('');
         } else {
           contPromos.innerHTML = '<li style="color:#777;">No hay promociones activas por el momento.</li>';
         }
@@ -238,20 +237,20 @@ document.addEventListener('DOMContentLoaded', async function () {
           esFav = await EH.client.favorites.isFavorite(sesion.id || sesion.correo, emprendimiento.id);
         }
 
-        btnFav.textContent = esFav ? '❤️ En tus favoritos' : '🤍 Agregar a favoritos';
+        btnFav.innerHTML = `${EH.icon('heart')} ${esFav ? 'En tus favoritos' : 'Agregar a favoritos'}`;
         btnFav.classList.toggle('btn-secundario', esFav);
         btnFav.classList.toggle('btn-primario', !esFav);
 
         btnFav.onclick = async () => {
           if (!sesion) {
-            EH.toast('Inicia sesión para guardar este negocio en favoritos ❤️');
+            EH.toast('Inicia sesión para guardar este negocio en favoritos');
             return;
           }
           const ahoraEsFav = await EH.client.favorites.toggle(sesion.id || sesion.correo, emprendimiento.id);
-          btnFav.textContent = ahoraEsFav ? '❤️ En tus favoritos' : '🤍 Agregar a favoritos';
+          btnFav.innerHTML = `${EH.icon('heart')} ${ahoraEsFav ? 'En tus favoritos' : 'Agregar a favoritos'}`;
           btnFav.classList.toggle('btn-secundario', ahoraEsFav);
           btnFav.classList.toggle('btn-primario', !ahoraEsFav);
-          EH.toast(ahoraEsFav ? '❤️ Emprendimiento agregado a tus favoritos' : 'Quitado de favoritos');
+          EH.toast(ahoraEsFav ? 'Emprendimiento agregado a tus favoritos' : 'Quitado de favoritos', ahoraEsFav ? 'favorito' : '');
         };
       }
     }
@@ -270,7 +269,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         const precio = Number(p.price || p.precio).toFixed(2);
         const imagenHtml = p.main_image_url || p.imagen
           ? `<img src="${EH.escapeHtml(p.main_image_url || p.imagen)}" alt="${EH.escapeHtml(p.name || p.nombre)}" class="tarjeta-producto__foto" loading="lazy">`
-          : `<div class="tarjeta-producto__imagen" aria-hidden="true">📦</div>`;
+          : `<div class="tarjeta-producto__imagen" aria-hidden="true">${EH.icon('package')}</div>`;
 
         return `
           <article class="card tarjeta-producto ${!tieneStock ? 'tarjeta-producto--agotado' : ''}">
@@ -280,7 +279,7 @@ document.addEventListener('DOMContentLoaded', async function () {
               <p>${EH.escapeHtml(p.description || p.descripcion || '')}</p>
               <div class="tarjeta-producto__precio">S/ ${precio}</div>
               <div class="tarjeta-producto__stock ${tieneStock ? '' : 'tarjeta-producto__stock--cero'}">
-                ${tieneStock ? `Stock: ${p.stock}` : '⚠️ Agotado'}
+                ${tieneStock ? `Stock: ${p.stock}` : `${EH.icon('triangle-alert')} Agotado`}
               </div>
               <button class="btn btn-primario btn-bloque" data-id="${EH.escapeHtml(p.id)}" ${!tieneStock ? 'disabled' : ''}>
                 ${tieneStock ? 'Agregar al carrito' : 'Sin stock'}
@@ -295,7 +294,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         btn.addEventListener('click', async function () {
           if (!sesion) {
             // Permitir guardar temporal o solicitar login
-            EH.toast('Inicia sesión para completar tu pedido 🛒');
+            EH.toast('Inicia sesión para completar tu pedido');
             setTimeout(() => {
               window.location.href = 'registro.html';
             }, 1000);
@@ -306,7 +305,7 @@ document.addEventListener('DOMContentLoaded', async function () {
           btn.disabled = true;
           try {
             await EH.client.cart.addItem(sesion.id || sesion.correo, prodId, 1);
-            EH.toast('🛒 Producto agregado al carrito');
+            EH.toast('Producto agregado al carrito', 'carrito');
             EH.actualizarBadgeCarrito();
           } catch (err) {
             console.error(err);

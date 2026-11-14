@@ -211,10 +211,10 @@
     async getAll() {
       if (!EH_CLIENT.isLive) {
         return [
-          { id: '1', name: 'Platos', slug: 'platos', icon: '🍽️' },
-          { id: '2', name: 'Bebidas', slug: 'bebidas', icon: '🥤' },
-          { id: '3', name: 'Productos', slug: 'productos', icon: '🛍️' },
-          { id: '4', name: 'Postres', slug: 'postres', icon: '🧁' }
+          { id: '1', name: 'Platos', slug: 'platos', icon: 'utensils' },
+          { id: '2', name: 'Bebidas', slug: 'bebidas', icon: 'cup-soda' },
+          { id: '3', name: 'Productos', slug: 'productos', icon: 'shopping-bag' },
+          { id: '4', name: 'Postres', slug: 'postres', icon: 'cake-slice' }
         ];
       }
 
@@ -1084,7 +1084,7 @@
         name: b.nombre,
         description: b.descripcion,
         status: 'published',
-        category: { name: b.categoria, icon: '🏪' },
+        category: { name: b.categoria, icon: 'store' },
         payment_methods: b.mediosPago || ['Yape', 'Plin', 'Efectivo'],
         operating_hours: b.horario || ''
       }));
@@ -1099,7 +1099,7 @@
         name: b.nombre,
         description: b.descripcion,
         status: 'published',
-        category: { name: b.categoria, icon: '🏪' },
+        category: { name: b.categoria, icon: 'store' },
         payment_methods: b.mediosPago || ['Yape', 'Plin', 'Efectivo'],
         operating_hours: b.horario || '',
         promotions: (b.promociones || []).map((p, idx) => ({ id: String(idx), title: p }))
@@ -1114,7 +1114,7 @@
         name: x.nombre,
         description: x.descripcion,
         status: x.status || 'published',
-        category: { name: x.categoria, icon: '🏪' },
+        category: { name: x.categoria, icon: 'store' },
         operating_hours: x.horario || '',
         payment_methods: x.mediosPago || ['Yape', 'Plin', 'Efectivo'],
         logo_url: x.logo_url || ''
@@ -1267,7 +1267,7 @@
         name: b.nombre,
         description: b.descripcion,
         status: 'published',
-        category: { name: b.categoria, icon: '🏪' }
+        category: { name: b.categoria, icon: 'store' }
       }));
     },
 

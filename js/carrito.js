@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       if (!items || items.length === 0) {
         contenedor.innerHTML = `
           <div class="estado-vacio">
-            <div class="estado-vacio__icono">🛒</div>
+            <div class="estado-vacio__icono">${EH.icon('shopping-cart')}</div>
             <p>Tu carrito está actualmente vacío.</p>
             <a href="inicio.html" class="btn btn-primario" style="margin-top:16px;">Explorar productos</a>
           </div>`;
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', async function () {
           </div>
           <div class="item-carrito__subtotal">S/ ${(Number(p.precio) * p.cantidad).toFixed(2)}</div>
           <button class="item-carrito__eliminar" data-accion="eliminar" data-id="${EH.escapeHtml(p.id)}" title="Eliminar producto" aria-label="Eliminar ${EH.escapeHtml(p.nombre)}">
-            🗑️
+            ${EH.icon('trash-2')}
           </button>
         </div>
       `).join('');

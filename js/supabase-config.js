@@ -22,10 +22,10 @@
   // Marcadores de posición por defecto
   const DEFAULT_CONFIG = {
     // REEMPLAZA ESTE VALOR CON TU URL DE SUPABASE (ej. https://xyzcompany.supabase.co)
-    SUPABASE_URL: 'https://TU-PROYECTO.supabase.co',
+    SUPABASE_URL: 'https://atnxprsenppfrdcqqjha.supabase.co',
 
     // REEMPLAZA ESTE VALOR CON TU PUBLISHABLE / ANON KEY (ej. eyJhbGciOi...)
-    SUPABASE_PUBLISHABLE_KEY: 'TU_SUPABASE_ANON_KEY'
+    SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_5UE0wPgMawN5YpRFJFv2Bw_aL2kXv_6'
   };
 
   // Permite sobreescritura opcional desde localStorage para pruebas locales sin editar el archivo

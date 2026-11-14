@@ -62,16 +62,16 @@ document.addEventListener('DOMContentLoaded', async function () {
       bannerEstado.style.background = '#FFF3CD';
       bannerEstado.style.color = '#856404';
       bannerEstado.style.border = '1px solid #FFEEBA';
-      bannerEstado.innerHTML = '⏳ <strong>Emprendimiento en revisión:</strong> Tu negocio está pendiente de aprobación por el equipo de administración. Una vez aprobado, aparecerá automáticamente en el catálogo público.';
+      bannerEstado.innerHTML = `${EH.icon('clock-3')} <strong>Emprendimiento en revisión:</strong> Tu negocio está pendiente de aprobación por el equipo de administración. Una vez aprobado, aparecerá automáticamente en el catálogo público.`;
     } else if (estado === 'published') {
       bannerEstado.className = 'mensaje mensaje-exito';
-      bannerEstado.innerHTML = '✅ <strong>Emprendimiento Publicado:</strong> Tu negocio se encuentra activo y visible para todos los clientes en el catálogo.';
+      bannerEstado.innerHTML = `${EH.icon('circle-check')} <strong>Emprendimiento Publicado:</strong> Tu negocio se encuentra activo y visible para todos los clientes en el catálogo.`;
     } else if (estado === 'rejected') {
       bannerEstado.className = 'mensaje mensaje-error';
-      bannerEstado.innerHTML = `❌ <strong>Emprendimiento Rechazado:</strong> ${EH.escapeHtml(miEmp.status_reason || 'Por favor revisa la información de tu negocio.')}`;
+      bannerEstado.innerHTML = `${EH.icon('circle-x')} <strong>Emprendimiento Rechazado:</strong> ${EH.escapeHtml(miEmp.status_reason || 'Por favor revisa la información de tu negocio.')}`;
     } else if (estado === 'suspended') {
       bannerEstado.className = 'mensaje mensaje-error';
-      bannerEstado.innerHTML = `⚠️ <strong>Emprendimiento Suspendido:</strong> Tu negocio ha sido pausado temporalmente. Contacta a soporte para más detalles.`;
+      bannerEstado.innerHTML = `${EH.icon('triangle-alert')} <strong>Emprendimiento Suspendido:</strong> Tu negocio ha sido pausado temporalmente. Contacta a soporte para más detalles.`;
     }
 
     try {
@@ -263,13 +263,13 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
 
         document.getElementById('mensajeEmprendimiento').innerHTML =
-          '<div class="mensaje mensaje-exito" role="alert">✅ Datos guardados correctamente. Tu emprendimiento está listo para revisión.</div>';
+          `<div class="mensaje mensaje-exito" role="alert">${EH.icon('circle-check')} Datos guardados correctamente. Tu emprendimiento está listo para revisión.</div>`;
         EH.toast('Emprendimiento guardado exitosamente.');
 
       } catch (err) {
         console.error(err);
         document.getElementById('mensajeEmprendimiento').innerHTML =
-          `<div class="mensaje mensaje-error" role="alert">❌ ${EH.escapeHtml(err.message || 'Error al guardar emprendimiento')}</div>`;
+          `<div class="mensaje mensaje-error" role="alert">${EH.icon('circle-x')} ${EH.escapeHtml(err.message || 'Error al guardar emprendimiento')}</div>`;
       } finally {
         btnSubmit.disabled = false;
         btnSubmit.textContent = miEmp ? 'Guardar cambios' : 'Crear emprendimiento';
@@ -335,7 +335,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         listaProductosAdmin.innerHTML = productos.map(p => {
           const imagenHtml = p.main_image_url || p.imagen
             ? `<img src="${EH.escapeHtml(p.main_image_url || p.imagen)}" alt="${EH.escapeHtml(p.name || p.nombre)}" style="width:48px; height:48px; object-fit:cover; border-radius:6px;">`
-            : `<div style="width:48px; height:48px; display:flex; align-items:center; justify-content:center; background:#eee; border-radius:6px;">📦</div>`;
+            : `<div style="width:48px; height:48px; display:flex; align-items:center; justify-content:center; background:#eee; border-radius:6px;">${EH.icon('package')}</div>`;
 
           return `
             <div class="producto-admin" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
@@ -529,7 +529,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         const pedidos = await EH.client.orders.getByBusiness(miEmp.id);
 
         if (!pedidos || pedidos.length === 0) {
-          listaPedidosAdmin.innerHTML = '<div class="estado-vacio"><div class="estado-vacio__icono">🧾</div><p>Todavía no has recibido ningún pedido.</p></div>';
+          listaPedidosAdmin.innerHTML = `<div class="estado-vacio"><div class="estado-vacio__icono">${EH.icon('receipt')}</div><p>Todavía no has recibido ningún pedido.</p></div>`;
           return;
         }
 

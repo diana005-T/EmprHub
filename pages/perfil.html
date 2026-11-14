@@ -64,7 +64,7 @@
         <a href="inicio.html">Inicio</a>
         <a href="favoritos.html">Favoritos</a>
         <a href="carrito.html" class="header__icono" aria-label="Carrito">
-          🛒 Carrito <span id="badgeCarrito" class="badge oculto">0</span>
+          <span data-lucide="shopping-cart" class="icon-slot" aria-hidden="true"></span> Carrito <span id="badgeCarrito" class="badge oculto">0</span>
         </a>
         <a href="perfil.html" class="activo" aria-current="page">Perfil</a>
       </nav>
@@ -205,7 +205,7 @@
           if (!pedidos || pedidos.length === 0) {
             cont.innerHTML = `
               <div class="estado-vacio">
-                <div class="estado-vacio__icono">🧾</div>
+                <div class="estado-vacio__icono">${EH.icon('receipt')}</div>
                 <p>Todavía no has realizado ningún pedido en EmpreHub.</p>
                 <a href="inicio.html" class="btn btn-primario" style="margin-top:16px;">Ver catálogo disponible</a>
               </div>`;
@@ -232,7 +232,7 @@
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                   <div>
                     <strong style="font-size:1.1rem; color:var(--color-azul);">Pedido ${EH.escapeHtml(numero)}</strong>
-                    <div style="font-size:0.85rem; color:#666;">${EH.escapeHtml(fecha)} · 🏪 ${EH.escapeHtml(negocio)}</div>
+                    <div style="font-size:0.85rem; color:#666;">${EH.escapeHtml(fecha)} · ${EH.icon('store')} ${EH.escapeHtml(negocio)}</div>
                   </div>
                   <span class="badge-estado ${badgeClase}">${EH.escapeHtml(estado)}</span>
                 </div>

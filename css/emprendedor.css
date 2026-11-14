@@ -20,7 +20,9 @@
 
 .panel__menu a,
 .panel__menu button {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 9px;
   width: 100%;
   text-align: left;
   padding: 12px var(--espacio-lg);
