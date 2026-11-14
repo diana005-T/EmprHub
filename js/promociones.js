@@ -40,8 +40,14 @@ document.addEventListener('DOMContentLoaded', async function () {
 
   /* ---- Renderizar lista de promociones ---- */
   function renderizarPromociones(promos) {
-    const activas = (promos || []).filter(p => !p.is_expired);
-    contadorEl.textContent = `${activas.length} / ${LIMITE_GRATUITO}`;
+    const hoy = new Date().toISOString().split('T')[0];
+    const activas = (promos || []).filter(p =>
+      p.is_active !== false &&
+      (!p.start_date || p.start_date.slice(0, 10) <= hoy) &&
+      (!p.end_date || p.end_date.slice(0, 10) >= hoy)
+    );
+    const esPremium = miEmprendimiento.plan === 'premium';
+    contadorEl.textContent = `${activas.length} / ${esPremium ? 'Sin límite' : LIMITE_GRATUITO}`;
 
     if (!promos || promos.length === 0) {
       listaEl.innerHTML = `
@@ -52,14 +58,15 @@ document.addEventListener('DOMContentLoaded', async function () {
       return;
     }
 
-    const hoy = new Date().toISOString().split('T')[0];
-
     listaEl.innerHTML = promos.map(p => {
-      const vencida    = p.end_date && p.end_date < hoy;
+      const vencida    = p.end_date && p.end_date.slice(0, 10) < hoy;
+      const desactivada = p.is_active === false;
       const descuento  = p.discount_percent ? `<span class="chip-categoria" style="background:#DCFCE7; color:#15803D;">${EH.escapeHtml(String(p.discount_percent))}% dto.</span>` : '';
       const fechaFin   = p.end_date ? `<small style="color:var(--color-gris-medio);">Vence: ${EH.escapeHtml(p.end_date)}</small>` : '';
-      const estadoBadge= vencida
-        ? `<span style="font-size:0.75rem; background:#FEE2E2; color:#991B1B; padding:2px 8px; border-radius:6px; font-weight:600;">VENCIDA</span>`
+      const estadoInactivo = vencida || desactivada ||
+        (p.start_date && p.start_date.slice(0, 10) > hoy);
+      const estadoBadge= estadoInactivo
+        ? `<span style="font-size:0.75rem; background:#FEE2E2; color:#991B1B; padding:2px 8px; border-radius:6px; font-weight:600;">${vencida ? 'VENCIDA' : desactivada ? 'INACTIVA' : 'PROGRAMADA'}</span>`
         : `<span style="font-size:0.75rem; background:#DCFCE7; color:#15803D; padding:2px 8px; border-radius:6px; font-weight:600;">ACTIVA</span>`;
 
       return `
@@ -131,14 +138,13 @@ document.addEventListener('DOMContentLoaded', async function () {
 
   /* ---- Verificar límite del plan gratuito ---- */
   async function verificarLimite() {
-    try {
-      const promos = await EH.client.promotions.getByBusiness(miEmprendimiento.id);
-      const hoy = new Date().toISOString().split('T')[0];
-      const activas = (promos || []).filter(p => !p.end_date || p.end_date >= hoy);
-      return activas.length;
-    } catch {
-      return 0;
-    }
+    const promos = await EH.client.promotions.getByBusiness(miEmprendimiento.id);
+    const hoy = new Date().toISOString().split('T')[0];
+    return (promos || []).filter(p =>
+      p.is_active !== false &&
+      (!p.start_date || p.start_date.slice(0, 10) <= hoy) &&
+      (!p.end_date || p.end_date.slice(0, 10) >= hoy)
+    ).length;
   }
 
   /* ---- Crear promoción ---- */
@@ -152,12 +158,14 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     try {
       // Verificar límite plan gratuito
-      const totalActivas = await verificarLimite();
-      if (totalActivas >= LIMITE_GRATUITO) {
-        EH.toast(`Límite del plan gratuito: solo puedes tener ${LIMITE_GRATUITO} promociones activas a la vez.`, 'advertencia');
-        btnGuardar.disabled = false;
-        btnGuardar.textContent = 'Publicar promoción';
-        return;
+      if (miEmprendimiento.plan !== 'premium') {
+        const totalActivas = await verificarLimite();
+        if (totalActivas >= LIMITE_GRATUITO) {
+          EH.toast(`Límite del plan gratuito: solo puedes tener ${LIMITE_GRATUITO} promociones activas a la vez.`, 'advertencia');
+          btnGuardar.disabled = false;
+          btnGuardar.textContent = 'Publicar promoción';
+          return;
+        }
       }
 
       const datos = {

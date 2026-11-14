@@ -490,13 +490,45 @@
         return fallbackProducts.delete(id);
       }
 
-      const { error } = await sb
+      const { data: imageRows, error: imageRowsError } = await sb
+        .from('product_images')
+        .select('storage_path')
+        .eq('product_id', id);
+
+      if (imageRowsError) throw imageRowsError;
+
+      const { data, error } = await sb
         .from('products')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .select('id')
+        .maybeSingle();
 
       if (error) throw error;
-      return true;
+      if (!data) throw new Error('No se encontró el producto o no tienes permiso para eliminarlo.');
+
+      const paths = (imageRows || [])
+        .map(image => image.storage_path)
+        .filter(Boolean);
+
+      if (paths.length > 0) {
+        let storageError;
+        try {
+          const result = await sb.storage
+            .from('emprehub-media')
+            .remove(paths);
+          storageError = result.error;
+        } catch (error) {
+          storageError = error;
+        }
+
+        if (storageError) {
+          console.error('El producto fue eliminado, pero no se pudieron eliminar todas sus imágenes:', storageError);
+          return { deleted: true, cleanupError: storageError };
+        }
+      }
+
+      return { deleted: true, cleanupError: null };
     }
   };
 
@@ -519,7 +551,13 @@
         throw new Error('La imagen excede el límite de 2MB.');
       }
 
-      const ext = file.name.split('.').pop() || 'jpg';
+      const extensionByType = {
+        'image/jpeg': 'jpg',
+        'image/jpg': 'jpg',
+        'image/png': 'png',
+        'image/webp': 'webp'
+      };
+      const ext = extensionByType[file.type];
       const fileName = `${businessId}/${productId}/${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
 
       const { data, error } = await sb.storage
@@ -536,26 +574,55 @@
       const publicUrl = publicData.publicUrl;
 
       // Registrar en la tabla product_images
-      const { data: imgRecord, error: imgErr } = await sb
-        .from('product_images')
-        .insert([{
-          product_id: productId,
-          storage_path: fileName,
-          public_url: publicUrl
-        }])
-        .select()
-        .single();
+      let imageRecord = null;
+      try {
+        const { data: imgRecord, error: imgErr } = await sb
+          .from('product_images')
+          .insert([{
+            product_id: productId,
+            storage_path: fileName,
+            public_url: publicUrl
+          }])
+          .select()
+          .single();
 
-      if (imgErr) {
-        console.warn('Aviso al registrar product_image en DB:', imgErr);
+        if (imgErr) throw imgErr;
+        imageRecord = imgRecord;
+
+        const { error: productUpdateError } = await sb
+          .from('products')
+          .update({ main_image_url: publicUrl })
+          .eq('id', productId)
+          .is('main_image_url', null);
+
+        if (productUpdateError) throw productUpdateError;
+      } catch (error) {
+        if (imageRecord && imageRecord.id) {
+          try {
+            const { error: rollbackError } = await sb
+              .from('product_images')
+              .delete()
+              .eq('id', imageRecord.id);
+            if (rollbackError) {
+              console.error('No se pudo revertir el registro de la imagen:', rollbackError);
+            }
+          } catch (rollbackError) {
+            console.error('No se pudo revertir el registro de la imagen:', rollbackError);
+          }
+        }
+
+        try {
+          const { error: cleanupError } = await sb.storage
+            .from('emprehub-media')
+            .remove([fileName]);
+          if (cleanupError) {
+            console.error('No se pudo limpiar el archivo subido tras el fallo:', cleanupError);
+          }
+        } catch (cleanupError) {
+          console.error('No se pudo limpiar el archivo subido tras el fallo:', cleanupError);
+        }
+        throw error;
       }
-
-      // Actualizar main_image_url del producto si está vacío
-      await sb
-        .from('products')
-        .update({ main_image_url: publicUrl })
-        .eq('id', productId)
-        .is('main_image_url', null);
 
       return { publicUrl, fileName };
     },
@@ -566,16 +633,26 @@
         return fallbackStorage.upload(file);
       }
 
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+      if (!allowedTypes.includes(file.type)) {
+        throw new Error('Formato de imagen no permitido. Usa JPG, PNG o WebP.');
+      }
       if (file.size > 2 * 1024 * 1024) {
         throw new Error('La imagen excede el límite de 2MB.');
       }
 
-      const ext = file.name.split('.').pop() || 'jpg';
-      const fileName = `${businessId}/branding/logo_${Date.now()}.${ext}`;
+      const extensionByType = {
+        'image/jpeg': 'jpg',
+        'image/jpg': 'jpg',
+        'image/png': 'png',
+        'image/webp': 'webp'
+      };
+      const ext = extensionByType[file.type];
+      const fileName = `${businessId}/branding/logo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
 
       const { data, error } = await sb.storage
         .from('emprehub-media')
-        .upload(fileName, file, { cacheControl: '3600', upsert: true });
+        .upload(fileName, file, { cacheControl: '3600', upsert: false });
 
       if (error) throw error;
 
@@ -585,10 +662,27 @@
 
       const publicUrl = publicData.publicUrl;
 
-      await sb
+      const { data: business, error: updateError } = await sb
         .from('businesses')
         .update({ logo_url: publicUrl })
-        .eq('id', businessId);
+        .eq('id', businessId)
+        .select('id')
+        .maybeSingle();
+
+      if (updateError || !business) {
+        try {
+          const { error: cleanupError } = await sb.storage
+            .from('emprehub-media')
+            .remove([fileName]);
+          if (cleanupError) {
+            console.error('No se pudo limpiar el logo subido tras el fallo:', cleanupError);
+          }
+        } catch (cleanupError) {
+          console.error('No se pudo limpiar el logo subido tras el fallo:', cleanupError);
+        }
+        if (updateError) throw updateError;
+        throw new Error('No se encontró el emprendimiento o no tienes permiso para actualizarlo.');
+      }
 
       return { publicUrl };
     }

@@ -317,9 +317,26 @@ p {
   padding: 12px var(--espacio-md);
 }
 
+.header__logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  color: var(--color-azul);
+  text-decoration: none;
+}
+
 .header__logo img {
   height: 42px;
   width: auto;
+  display: block;
+}
+
+.header__nombre {
+  color: var(--color-azul);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.1;
 }
 
 .header__nav {
@@ -389,6 +406,12 @@ p {
   }
   .header__nav.header__nav--abierto {
     display: flex;
+  }
+}
+
+@media (max-width: 420px) {
+  .header__nombre {
+    font-size: 1rem;
   }
 }
 
@@ -562,4 +585,8 @@ p {
   color: var(--color-gris-medio);
   cursor: not-allowed;
   pointer-events: none;
+}
+/* Respeta el atributo hidden en los enlaces del menú */
+.header__nav a[hidden] {
+    display: none !important;
 }

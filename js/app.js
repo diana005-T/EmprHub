@@ -144,6 +144,14 @@ EH.sesion = {
   }
 };
 
+EH.normalizarRol = function (rol) {
+  const valor = String(rol || '').trim().toLowerCase();
+  if (valor === 'cliente' || valor === 'customer') return 'customer';
+  if (valor === 'emprendedor' || valor === 'entrepreneur') return 'entrepreneur';
+  if (valor === 'administrador' || valor === 'admin') return 'admin';
+  return valor;
+};
+
 /* --------------------------------------------------------------------------
    4) PROTECCIÓN DE PÁGINAS Y ROLES (Guardas de acceso)
    tipoRequerido: 'customer' | 'entrepreneur' | 'admin' | null (cualquier sesión)
@@ -184,8 +192,8 @@ EH.protegerPagina = async function (tipoRequerido, rutaLogin = 'registro.html') 
   }
 
   // Normalizar nombres de roles
-  const userRole = (sesion.tipo === 'cliente' ? 'customer' : (sesion.tipo === 'emprendedor' ? 'entrepreneur' : sesion.tipo));
-  const reqRole = (tipoRequerido === 'cliente' ? 'customer' : (tipoRequerido === 'emprendedor' ? 'entrepreneur' : tipoRequerido));
+  const userRole = EH.normalizarRol(sesion.tipo);
+  const reqRole = EH.normalizarRol(tipoRequerido);
 
   // Si exige un rol específico y no coincide (salvo que sea admin que tiene acceso de supervisión)
   if (reqRole && userRole !== reqRole && userRole !== 'admin') {
@@ -297,11 +305,22 @@ EH.actualizarNavegacion = function () {
   if (!nav) return;
 
   const sesion = EH.sesion.obtener();
-  const enSubcarpeta = window.location.pathname.includes('/pages/emprendedor/') || window.location.pathname.includes('/pages/admin/');
+  const tipoUsuario = EH.normalizarRol(sesion && sesion.tipo);
+
+  // Ocultar Favoritos y Carrito únicamente a emprendedores
+  const esEmprendedor = tipoUsuario === 'entrepreneur';
+
+  nav.querySelectorAll('a[href*="favoritos.html"], a[href*="carrito.html"]')
+    .forEach(enlace => {
+      enlace.hidden = esEmprendedor;
+    });
+
+  const enCarpetaEmprendedor = window.location.pathname.includes('/pages/emprendedor/');
+  const enSubcarpeta = enCarpetaEmprendedor || window.location.pathname.includes('/pages/admin/');
   const prefijoPages = enSubcarpeta ? '../' : '';
 
   // Si hay sesión y es admin, agregar enlace al panel de administración
-  if (sesion && (sesion.tipo === 'admin' || sesion.tipo === 'administrador')) {
+  if (sesion && tipoUsuario === 'admin') {
     let enlaceAdmin = nav.querySelector('#navEnlaceAdmin');
     if (!enlaceAdmin) {
       enlaceAdmin = document.createElement('a');
@@ -311,26 +330,34 @@ EH.actualizarNavegacion = function () {
       enlaceAdmin.innerHTML = `${EH.icon('shield-check')}<span>Panel Admin</span>`;
       nav.prepend(enlaceAdmin);
     }
+  } else {
+    const enlaceAdmin = nav.querySelector('#navEnlaceAdmin');
+    if (enlaceAdmin) enlaceAdmin.remove();
   }
 
   // Si hay sesión y es emprendedor, permitir acceso directo a su panel
-  if (sesion && (sesion.tipo === 'emprendedor' || sesion.tipo === 'entrepreneur')) {
+  if (sesion && esEmprendedor) {
     let enlaceEmp = nav.querySelector('#navEnlaceEmprendedor');
-    if (!enlaceEmp && !enSubcarpeta) {
+    if (!enlaceEmp) {
       enlaceEmp = document.createElement('a');
       enlaceEmp.id = 'navEnlaceEmprendedor';
-      enlaceEmp.href = 'emprendedor/panel.html';
+      enlaceEmp.href = enCarpetaEmprendedor ? 'panel.html' : prefijoPages + 'emprendedor/panel.html';
       enlaceEmp.innerHTML = `${EH.icon('store')}<span>Mi Negocio</span>`;
       nav.insertBefore(enlaceEmp, nav.firstChild);
     }
+  } else {
+    const enlaceEmp = nav.querySelector('#navEnlaceEmprendedor');
+    if (enlaceEmp) enlaceEmp.remove();
   }
 
-  // Si es un visitante no autenticado en páginas públicas (inicio, emprendimiento)
-  if (!sesion) {
-    const enlacePerfil = nav.querySelector('a[href*="perfil.html"]');
-    if (enlacePerfil) {
+  const enlacePerfil = nav.querySelector('#enlacePerfilNav, a[href*="perfil.html"], a[href*="registro.html"]');
+  if (enlacePerfil) {
+    if (!sesion) {
       enlacePerfil.textContent = 'Ingresar';
       enlacePerfil.href = prefijoPages + 'registro.html';
+    } else {
+      enlacePerfil.textContent = 'Perfil';
+      enlacePerfil.href = prefijoPages + 'perfil.html';
     }
   }
 };

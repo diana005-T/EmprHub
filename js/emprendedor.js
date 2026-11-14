@@ -378,8 +378,12 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (!confirmado) return;
 
             try {
-              await EH.client.products.delete(btn.dataset.id);
-              EH.toast('Producto eliminado correctamente.');
+              const resultado = await EH.client.products.delete(btn.dataset.id);
+              if (resultado && resultado.cleanupError) {
+                EH.toast('Producto eliminado; algunas imágenes no pudieron eliminarse de Storage.', 'advertencia');
+              } else {
+                EH.toast('Producto eliminado correctamente.');
+              }
               await pintarProductos();
             } catch (err) {
               console.error(err);

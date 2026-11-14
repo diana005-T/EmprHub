@@ -78,14 +78,15 @@ Las migraciones deben aplicarse **en orden numérico** usando el **SQL Editor** 
 | 6 | [`supabase/migrations/006_seed_data.sql`](supabase/migrations/006_seed_data.sql) | Categorías iniciales y función para promover admin |
 | 7 | [`supabase/migrations/007_security_rls_and_categories.sql`](supabase/migrations/007_security_rls_and_categories.sql) | Evita recursión en políticas de membresía y restringe escrituras directas |
 | 8 | [`supabase/migrations/008_effective_privileges_and_order_transitions.sql`](supabase/migrations/008_effective_privileges_and_order_transitions.sql) | Endurece privilegios efectivos y valida las transiciones de pedidos mediante RPC |
+| 9 | [`supabase/migrations/009_plan_storage_and_checkout_hardening.sql`](supabase/migrations/009_plan_storage_and_checkout_hardening.sql) | Serializa límites de planes, endurece Storage y valida el checkout |
 
-> **Nota:** Ejecuta los archivos uno por uno, no todos juntos. Verifica que cada uno muestre **"Success"** antes de pasar al siguiente. Prueba primero 001–008 en un proyecto Supabase de staging con roles y datos de prueba. La suite local no valida permisos efectivos, RLS ni funciones contra PostgreSQL/Supabase real; no apliques 007–008 en producción sin esa comprobación.
+> **Nota:** Ejecuta los archivos uno por uno, no todos juntos. Verifica que cada uno muestre **"Success"** antes de pasar al siguiente. Prueba primero 001–009 en un proyecto Supabase de staging con roles y datos de prueba. La migración 009 se detiene si encuentra recursos gratuitos ya sobre el límite o propietarios inseguros de funciones; no elimines datos ni alteres propietarios para evitar ese control. Una base que ya aplicó 001–008 debe ejecutar solo 009, no volver a ejecutar 001–008. La suite local no valida permisos efectivos, RLS ni funciones contra PostgreSQL/Supabase real; no apliques migraciones en producción sin esa comprobación.
 
 ---
 
 ## Crear el primer administrador
 
-Después de aplicar todas las migraciones:
+Después de aplicar todas las migraciones en el entorno de prueba:
 
 1. Regístrate en la app como cualquier usuario (cliente o emprendedor).
 2. En el **SQL Editor** de Supabase ejecuta:
@@ -94,9 +95,9 @@ Después de aplicar todas las migraciones:
 SELECT public.promote_user_to_admin('tu-correo@ejemplo.com');
 ```
 
-Reemplaza `tu-correo@ejemplo.com` con el correo con el que te registraste.
+Reemplaza `tu-correo@ejemplo.com` con el correo con el que te registraste. La función solo acepta la primera inicialización desde una sesión SQL administrativa de confianza y falla si ya existe un administrador.
 
-> ⚠️ Esta es la **única forma** de crear un administrador. No existe ningún formulario en la app que permita asignarse el rol de admin — el sistema lo bloquea activamente.
+> ⚠️ No concedas `EXECUTE` de esta función a `anon` ni a `authenticated`. No existe ningún formulario público para asignarse el rol de admin; el trigger de perfiles bloquea esa escalada.
 
 Una vez ejecutado, cierra sesión y vuelve a iniciar sesión. Serás redirigido al panel de administración.
 

@@ -23,6 +23,13 @@ function assert(condition, message) {
   }
 }
 
+function getPolicySql(source, policyName) {
+  const start = source.indexOf(`CREATE POLICY "${policyName}"`);
+  if (start === -1) return '';
+  const end = source.indexOf('\nCREATE POLICY "', start + 1);
+  return source.slice(start, end === -1 ? source.length : end);
+}
+
 console.log('\n============================================================');
 console.log('EJECUTANDO SUITE DE PRUEBAS TÉCNICAS: EMPREHUB');
 console.log('============================================================\n');
@@ -68,7 +75,8 @@ const migrationFiles = [
   'supabase/migrations/005_storage_setup.sql',
   'supabase/migrations/006_seed_data.sql',
   'supabase/migrations/007_security_rls_and_categories.sql',
-  'supabase/migrations/008_effective_privileges_and_order_transitions.sql'
+  'supabase/migrations/008_effective_privileges_and_order_transitions.sql',
+  'supabase/migrations/009_plan_storage_and_checkout_hardening.sql'
 ];
 
 migrationFiles.forEach(file => {
@@ -82,7 +90,10 @@ const rpcSql = fs.readFileSync(path.join(__dirname, '..', 'supabase/migrations/0
 const triggersSql = fs.readFileSync(path.join(__dirname, '..', 'supabase/migrations/002_triggers_and_rules.sql'), 'utf8');
 const securityFixSql = fs.readFileSync(path.join(__dirname, '..', 'supabase/migrations/007_security_rls_and_categories.sql'), 'utf8');
 const securityHardeningSql = fs.readFileSync(path.join(__dirname, '..', 'supabase/migrations/008_effective_privileges_and_order_transitions.sql'), 'utf8');
+const planStorageCheckoutSql = fs.readFileSync(path.join(__dirname, '..', 'supabase/migrations/009_plan_storage_and_checkout_hardening.sql'), 'utf8');
+const storageSql = fs.readFileSync(path.join(__dirname, '..', 'supabase/migrations/005_storage_setup.sql'), 'utf8');
 const supabaseClientCode = fs.readFileSync(path.join(__dirname, '..', 'js/supabase-client.js'), 'utf8');
+const promotionClientCode = fs.readFileSync(path.join(__dirname, '..', 'js/promociones.js'), 'utf8');
 
 const requiredTables = [
   'profiles',
@@ -150,6 +161,75 @@ assert(triggersSql.includes('trg_validate_business_free_plan'), 'Trigger de vali
 assert(triggersSql.includes('trg_validate_products_free_plan'), 'Trigger de validación de plan gratuito (máx 20 productos) definido');
 assert(triggersSql.includes('trg_validate_product_images_free_plan'), 'Trigger de validación de plan gratuito (máx 3 imágenes) definido');
 assert(triggersSql.includes('trg_validate_promotions_free_plan'), 'Trigger de validación de plan gratuito (máx 2 promociones) definido');
+assert(planStorageCheckoutSql.includes('CREATE TRIGGER trg_validate_business_free_plan'), 'La migración 009 vuelve a aplicar el límite gratuito de emprendimientos');
+assert(planStorageCheckoutSql.includes('BEFORE INSERT OR UPDATE OF owner_id, plan ON public.businesses'), 'El límite de negocios se valida también al cambiar owner o plan');
+assert(planStorageCheckoutSql.includes('BEFORE INSERT OR UPDATE OF business_id ON public.products'), 'El límite de productos se valida en inserciones y reasignaciones');
+assert(planStorageCheckoutSql.includes("'emprehub:product:' || NEW.id::TEXT"), 'La reasignación de productos se serializa con cargas de imágenes concurrentes');
+assert(planStorageCheckoutSql.includes('BEFORE INSERT OR UPDATE OF product_id ON public.product_images'), 'El límite de imágenes se valida en inserciones y reasignaciones');
+assert(planStorageCheckoutSql.includes('BEFORE INSERT OR UPDATE ON public.promotions'), 'El límite de promociones se valida al modificar cualquier campo');
+assert((planStorageCheckoutSql.match(/pg_advisory_xact_lock/g) || []).length >= 5, 'Los límites de plan usan bloqueos transaccionales para serializar cambios concurrentes');
+assert(planStorageCheckoutSql.includes("IF v_business_plan = 'free'"), 'Los límites de productos, imágenes y promociones eximen al plan premium');
+assert(planStorageCheckoutSql.includes("jsonb_typeof(p_items) IS DISTINCT FROM 'array'"), 'El checkout valida que los ítems recibidos sean un arreglo JSON');
+assert(planStorageCheckoutSql.includes('IF jsonb_array_length(p_items) = 0 THEN'), 'El checkout rechaza arreglos de productos vacíos después de validar el tipo');
+assert(/WHERE b\.id = p_business_id\s+FOR UPDATE/.test(planStorageCheckoutSql), 'El checkout bloquea el emprendimiento para coordinarse con su moderación');
+assert(planStorageCheckoutSql.includes("session_user IN ('postgres', 'supabase_admin')"), 'El bootstrap de administrador está limitado a sesiones SQL de confianza');
+assert(planStorageCheckoutSql.includes("current_setting('emprehub.bootstrap_first_admin', true) = 'on'"), 'El trigger solo permite el bootstrap explícito del primer administrador');
+assert(planStorageCheckoutSql.includes("REVOKE ALL ON FUNCTION public.promote_user_to_admin(TEXT)"), 'El bootstrap no está disponible para roles de API');
+assert(planStorageCheckoutSql.includes("array_length(string_to_array(name, '/'), 1) = 3"), 'Las políticas de Storage validan la estructura exacta de la ruta');
+assert(!/auth\.uid\(\)\s*=\s*owner\b/.test(planStorageCheckoutSql), 'Las políticas de Storage no dependen de la columna obsoleta owner');
+assert(planStorageCheckoutSql.includes('CREATE POLICY "Users can delete their own media or admin"'), 'Storage permite limpiar archivos de productos propios tras borrar sus filas');
+assert(storageSql.includes('CREATE OR REPLACE FUNCTION public.can_manage_business_media'), 'La migración 005 define su helper de Storage antes de las políticas');
+assert(!storageSql.includes('public.current_user_is_business_member'), 'La migración 005 no depende de la función creada después en 007');
+assert(storageSql.includes('REVOKE ALL ON FUNCTION public.can_manage_business_media(TEXT, TEXT)'), 'El helper de Storage revoca ejecución pública y anónima');
+assert(storageSql.includes('TO authenticated;'), 'El helper de Storage solo permite ejecución autenticada');
+assert(planStorageCheckoutSql.includes("public.can_manage_business_media(split_part(name, '/', 1))"), 'Las políticas finales usan el helper para borrar imágenes aunque el producto ya no exista');
+[
+  ['migración 005', storageSql],
+  ['migración 009', planStorageCheckoutSql]
+].forEach(([migrationName, migrationSql]) => {
+  const insertPolicy = getPolicySql(migrationSql, 'Authenticated users can upload to emprehub-media');
+  const updatePolicy = getPolicySql(migrationSql, 'Users can update their own media or admin');
+  const deletePolicy = getPolicySql(migrationSql, 'Users can delete their own media or admin');
+  const updateUsingPolicy = updatePolicy.slice(
+    updatePolicy.indexOf('USING ('),
+    updatePolicy.indexOf('WITH CHECK (')
+  );
+  const updateWithCheckPolicy = updatePolicy.slice(updatePolicy.indexOf('WITH CHECK ('));
+  const requiredSegments = [
+    "array_length(string_to_array(name, '/'), 1) = 3",
+    "split_part(name, '/', 1) <> ''",
+    "split_part(name, '/', 2) <> ''",
+    "split_part(name, '/', 3) <> ''"
+  ];
+
+  assert(requiredSegments.every(segment => insertPolicy.includes(segment)), `${migrationName}: INSERT exige exactamente tres segmentos no vacíos`);
+  assert(requiredSegments.every(segment => updateUsingPolicy.includes(segment)), `${migrationName}: UPDATE valida la ruta de origen`);
+  assert(requiredSegments.every(segment => updateWithCheckPolicy.includes(segment)), `${migrationName}: UPDATE valida la ruta de destino`);
+  assert(insertPolicy.includes("split_part(name, '/', 2) = 'branding'"), `${migrationName}: INSERT reconoce rutas branding`);
+  assert(updatePolicy.includes("split_part(name, '/', 2) = 'branding'"), `${migrationName}: UPDATE reconoce rutas branding`);
+  assert(/can_manage_business_media\(\s*split_part\(name, '\/', 1\),\s*split_part\(name, '\/', 2\)\s*\)/.test(insertPolicy), `${migrationName}: INSERT verifica UUID y pertenencia del producto`);
+  assert(/can_manage_business_media\(\s*split_part\(name, '\/', 1\),\s*split_part\(name, '\/', 2\)\s*\)/.test(updatePolicy), `${migrationName}: UPDATE verifica UUID y pertenencia del producto`);
+  assert(requiredSegments.every(segment => deletePolicy.includes(segment)), `${migrationName}: DELETE exige tres segmentos no vacíos`);
+  assert(deletePolicy.includes("public.can_manage_business_media(split_part(name, '/', 1))"), `${migrationName}: DELETE permite borrar imágenes huérfanas si el usuario gestiona el negocio`);
+  assert(!/can_manage_business_media\(\s*split_part\(name, '\/', 1\),/.test(deletePolicy), `${migrationName}: DELETE no exige que el producto siga existiendo`);
+  assert(deletePolicy.includes("split_part(name, '/', 2) ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'"), `${migrationName}: DELETE conserva la forma UUID de las rutas de producto`);
+
+  const helperAuthorization = /b\.owner_id = v_user_id[\s\S]*bm\.business_id = b\.id[\s\S]*bm\.user_id = v_user_id[\s\S]*public\.is_admin\(\)/;
+  assert(helperAuthorization.test(migrationSql), `${migrationName}: DELETE autoriza propietarios, colaboradores y administradores y rechaza otros usuarios`);
+});
+assert(storageSql.includes("p_product_path !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'"), 'El helper rechaza un product_id que no sea UUID');
+assert(/p\.id = v_product_id\s+AND p\.business_id = b\.id/.test(storageSql), 'El helper comprueba que el producto pertenezca al negocio de la ruta');
+assert(planStorageCheckoutSql.includes('REVOKE ALL ON FUNCTION public.validate_business_free_plan() FROM PUBLIC, anon, authenticated'), 'Los validadores SECURITY DEFINER no son ejecutables por roles de API');
+assert(planStorageCheckoutSql.includes('public.validate_product_images_free_plan()\'::REGPROCEDURE'), 'La migración verifica el propietario efectivo de los validadores');
+assert(/GRANT EXECUTE ON FUNCTION public\.create_order_atomic\(UUID, TEXT, TEXT, TEXT, TEXT, JSONB, TEXT\)\s+TO authenticated;/.test(planStorageCheckoutSql), 'El checkout sigue disponible solo para authenticated');
+assert(planStorageCheckoutSql.includes('has_function_privilege('), 'La migración valida permisos EXECUTE efectivos');
+assert(planStorageCheckoutSql.includes('rolsuper OR r.rolbypassrls'), 'La migración comprueba el propietario efectivo BYPASSRLS sin reasignarlo');
+assert(supabaseClientCode.includes("if (imgErr) throw imgErr"), 'El cliente propaga errores al registrar una imagen de producto');
+assert(supabaseClientCode.includes("if (productUpdateError) throw productUpdateError"), 'El cliente propaga errores al actualizar la imagen principal');
+assert(supabaseClientCode.includes(".remove([fileName])"), 'El cliente limpia archivos subidos cuando falla su registro');
+assert(supabaseClientCode.includes("select('storage_path')"), 'La eliminación de producto recupera rutas para limpiar sus imágenes');
+assert(promotionClientCode.includes("miEmprendimiento.plan !== 'premium'"), 'La interfaz no aplica el límite gratuito a emprendimientos premium');
+assert(!/catch\s*\{\s*return\s+0;/.test(promotionClientCode), 'Los errores al consultar promociones no se convierten en un límite falso de cero');
 
 // ----------------------------------------------------------------------------
 // TEST 3: PRUEBAS DE SANITIZACIÓN XSS
